@@ -35,4 +35,4 @@ atk:
   batch:
     simulation-iterations: 100
     chunk-size: 20
-    sample-file: classpath:samples/nomina-soap-local.xml
+    sample-file: classpath:samples/ZSVIDA_Nom15960.xml

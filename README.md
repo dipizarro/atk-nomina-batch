@@ -38,7 +38,7 @@ La configuracion vive en `src/main/resources/application.yml`.
 
 - `atk.batch.simulation-iterations=100`
 - `atk.batch.chunk-size=20`
-- `atk.batch.sample-file=classpath:samples/nomina-soap-local.xml`
+- `atk.batch.sample-file=classpath:samples/ZSVIDA_Nom15960.xml`
 
 Spring Batch inicializa su metadata con `spring.batch.jdbc.initialize-schema=always`.
 

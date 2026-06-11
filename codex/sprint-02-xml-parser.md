@@ -1,15 +1,19 @@
-Sprint 2 — Parser XML SOAP local
+Sprint 2 — Parser SOAP Artikos real
 
-Objetivo: leer src/main/resources/samples/nomina-soap-local.xml, extraer la nómina y documentos.
+Objetivo: leer ZSVIDA_Nom15960.xml, extraer la nómina y mapearla a modelo interno.
 
-Commits:
+Commit sugerido:
 
-git commit -m "feat: add local SOAP XML parser for Artikos nomina"
-git commit -m "test: cover nomina XML parser with sample payload"
+git commit -m "feat: parse Artikos SOAP nomina XML sample"
 
-Entregables:
+Criterios de aceptación:
 
-NominaXmlParserService
-Modelo Nomina
-Modelo DocumentoContable
-Test unitario del parser
+- El XML SOAP local se lee desde resources/samples/ZSVIDA_Nom15960.xml
+- Se extrae MessageId.MsgStatus
+- Se valida que MsgStatus = 0
+- Se extrae Nomina.Cabecera.Numero_Nomina = 15960
+- Se extrae Cantidad_Documentos = 1
+- Se extrae 1 Documento
+- Se extraen 2 Conciliaciones
+- Se extraen 2 Distribuciones en total
+- El parser tiene test unitario
