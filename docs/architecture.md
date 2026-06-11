@@ -16,10 +16,23 @@
 
 El endpoint `POST /api/v1/nominas/batch/start` actua como interruptor del job `nominaDocumentosContablesJob`.
 El lanzamiento usa un `JobLauncher` con `TaskExecutor`, por lo que la respuesta se entrega inmediatamente con el
-`jobExecutionId` mientras el step `initialNominaTaskletStep` continua ejecutandose en segundo plano.
+`jobExecutionId` mientras el step `processNominaDocumentosStep` continua ejecutandose en segundo plano.
 
 El endpoint `GET /api/v1/nominas/batch/{jobExecutionId}` consulta la metadata persistida por Spring Batch mediante
 `JobExplorer`.
+
+El endpoint `GET /api/v1/nominas/batch/{jobExecutionId}/summary` expone los totales funcionales almacenados en memoria
+para la POC.
+
+## Procesamiento chunk
+
+El job procesa documentos contables de nomina mediante `ItemReader`, `ItemProcessor` e `ItemWriter`.
+
+- Reader: parsea el XML SOAP Artikos local y simula masividad repitiendo los documentos segun `atk.batch.simulation-iterations`.
+- Processor: aplica validaciones POC sobre monto total, RUT de proveedor y tipo de documento.
+- Writer: registra totales por chunk y agrega resultados al store en memoria.
+
+El tamano de chunk se configura con `atk.batch.chunk-size`.
 
 ## Persistencia y metadata batch
 

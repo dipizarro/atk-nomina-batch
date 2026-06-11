@@ -28,6 +28,7 @@ La aplicacion expone:
 - Health propio: `GET /api/v1/health`
 - Iniciar batch de nominas: `POST /api/v1/nominas/batch/start`
 - Consultar batch de nominas: `GET /api/v1/nominas/batch/{jobExecutionId}`
+- Consultar resumen del batch: `GET /api/v1/nominas/batch/{jobExecutionId}/summary`
 - Actuator health: `GET /actuator/health`
 - Consola H2: `GET /h2-console`
 - Swagger UI: `GET /swagger-ui.html`
@@ -51,5 +52,5 @@ mvn clean test
 ## Commit sugerido
 
 ```bash
-git commit -m "feat: add REST endpoint to launch nomina batch job"
+git commit -m "feat: process nomina documents using Spring Batch chunks"
 ```

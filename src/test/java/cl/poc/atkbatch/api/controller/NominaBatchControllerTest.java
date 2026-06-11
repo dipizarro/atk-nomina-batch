@@ -23,7 +23,7 @@ class NominaBatchControllerTest {
     private MockMvc mockMvc;
 
     @Test
-    void startBatchRespondsBeforeTaskletFinishes() throws Exception {
+    void startBatchRespondsImmediately() throws Exception {
         long startedAt = System.nanoTime();
 
         mockMvc.perform(post("/api/v1/nominas/batch/start"))
@@ -52,5 +52,28 @@ class NominaBatchControllerTest {
                 .andExpect(jsonPath("$.jobName", is("nominaDocumentosContablesJob")))
                 .andExpect(jsonPath("$.status", notNullValue()))
                 .andExpect(jsonPath("$.exitStatus", notNullValue()));
+    }
+
+    @Test
+    void getBatchSummaryReturnsChunkProcessingTotals() throws Exception {
+        MvcResult startResult = mockMvc.perform(post("/api/v1/nominas/batch/start"))
+                .andExpect(status().isAccepted())
+                .andReturn();
+
+        String responseBody = startResult.getResponse().getContentAsString();
+        String jobExecutionId = responseBody.replaceAll(".*\"jobExecutionId\":(\\d+).*", "$1");
+
+        Thread.sleep(1_000L);
+
+        mockMvc.perform(get("/api/v1/nominas/batch/{jobExecutionId}/summary", jobExecutionId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.jobExecutionId").value(Integer.parseInt(jobExecutionId)))
+                .andExpect(jsonPath("$.status", is("COMPLETED")))
+                .andExpect(jsonPath("$.numeroNomina").value(15960))
+                .andExpect(jsonPath("$.totalProcessed").value(100))
+                .andExpect(jsonPath("$.totalOk").value(100))
+                .andExpect(jsonPath("$.totalNok").value(0))
+                .andExpect(jsonPath("$.totalConciliaciones").value(200))
+                .andExpect(jsonPath("$.totalDistribuciones").value(200));
     }
 }

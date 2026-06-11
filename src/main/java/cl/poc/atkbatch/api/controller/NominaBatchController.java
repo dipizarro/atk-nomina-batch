@@ -1,9 +1,11 @@
 package cl.poc.atkbatch.api.controller;
 
 import cl.poc.atkbatch.api.dto.BatchStatusResponse;
+import cl.poc.atkbatch.api.dto.BatchSummaryResponse;
 import cl.poc.atkbatch.api.dto.StartBatchResponse;
 import cl.poc.atkbatch.service.BatchLauncherService;
 import cl.poc.atkbatch.service.BatchStatusService;
+import cl.poc.atkbatch.service.BatchSummaryService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.HttpStatus;
@@ -21,10 +23,15 @@ public class NominaBatchController {
 
     private final BatchLauncherService batchLauncherService;
     private final BatchStatusService batchStatusService;
+    private final BatchSummaryService batchSummaryService;
 
-    public NominaBatchController(BatchLauncherService batchLauncherService, BatchStatusService batchStatusService) {
+    public NominaBatchController(
+            BatchLauncherService batchLauncherService,
+            BatchStatusService batchStatusService,
+            BatchSummaryService batchSummaryService) {
         this.batchLauncherService = batchLauncherService;
         this.batchStatusService = batchStatusService;
+        this.batchSummaryService = batchSummaryService;
     }
 
     @Operation(summary = "Inicia asincronicamente el batch de nominas")
@@ -38,5 +45,11 @@ public class NominaBatchController {
     @GetMapping("/{jobExecutionId}")
     public BatchStatusResponse getBatchStatus(@PathVariable Long jobExecutionId) {
         return batchStatusService.getStatus(jobExecutionId);
+    }
+
+    @Operation(summary = "Consulta el resumen de resultados de una ejecucion batch")
+    @GetMapping("/{jobExecutionId}/summary")
+    public BatchSummaryResponse getBatchSummary(@PathVariable Long jobExecutionId) {
+        return batchSummaryService.getSummary(jobExecutionId);
     }
 }
