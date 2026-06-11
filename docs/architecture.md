@@ -12,6 +12,15 @@
 - Servicios: coordinara casos de uso entre API, dominio y batch.
 - Shared exception: centralizara excepciones y manejo transversal.
 
+## Disparador REST
+
+El endpoint `POST /api/v1/nominas/batch/start` actua como interruptor del job `nominaDocumentosContablesJob`.
+El lanzamiento usa un `JobLauncher` con `TaskExecutor`, por lo que la respuesta se entrega inmediatamente con el
+`jobExecutionId` mientras el step `initialNominaTaskletStep` continua ejecutandose en segundo plano.
+
+El endpoint `GET /api/v1/nominas/batch/{jobExecutionId}` consulta la metadata persistida por Spring Batch mediante
+`JobExplorer`.
+
 ## Persistencia y metadata batch
 
 La POC usa H2 en memoria con modo compatible Oracle:
