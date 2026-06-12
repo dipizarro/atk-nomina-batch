@@ -33,6 +33,7 @@ springdoc:
 
 atk:
   batch:
+    simulation-nominas: 1000
     simulation-iterations: 100
     chunk-size: 20
     sample-file: classpath:samples/ZSVIDA_Nom15960.xml

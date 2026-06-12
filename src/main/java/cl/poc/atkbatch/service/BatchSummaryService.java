@@ -1,6 +1,8 @@
 package cl.poc.atkbatch.service;
 
 import cl.poc.atkbatch.api.dto.BatchSummaryResponse;
+import cl.poc.atkbatch.api.dto.NominaResultResponse;
+import cl.poc.atkbatch.domain.ResultadoNomina;
 import org.springframework.batch.core.JobExecution;
 import org.springframework.batch.core.explore.JobExplorer;
 import org.springframework.http.HttpStatus;
@@ -28,11 +30,33 @@ public class BatchSummaryService {
         return new BatchSummaryResponse(
                 jobExecutionId,
                 execution.getStatus().name(),
-                summary.numeroNomina(),
-                summary.totalProcessed(),
+                summary.totalNominas(),
+                summary.totalDocuments(),
                 summary.totalOk(),
                 summary.totalNok(),
                 summary.totalConciliaciones(),
-                summary.totalDistribuciones());
+                summary.totalDistribuciones(),
+                summary.nomfactresGenerated());
+    }
+
+    public NominaResultResponse getNominaResult(Long jobExecutionId, Long numeroNomina) {
+        JobExecution execution = jobExplorer.getJobExecution(jobExecutionId);
+        if (execution == null) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Ejecucion batch no encontrada");
+        }
+
+        ResultadoNomina result = batchResultStore.getNominaResult(jobExecutionId, numeroNomina)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Resultado de nomina no encontrado"));
+
+        return new NominaResultResponse(
+                result.jobExecutionId(),
+                result.numeroNomina(),
+                result.totalDocuments(),
+                result.totalOk(),
+                result.totalNok(),
+                result.totalConciliaciones(),
+                result.totalDistribuciones(),
+                result.status(),
+                result.nomfactresXml());
     }
 }

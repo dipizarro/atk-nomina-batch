@@ -1,11 +1,16 @@
 package cl.poc.atkbatch.batch.config;
 
+import cl.poc.atkbatch.batch.processor.NominaItemProcessor;
 import cl.poc.atkbatch.batch.processor.NominaDocumentoItemProcessor;
+import cl.poc.atkbatch.batch.reader.NominaItemReader;
 import cl.poc.atkbatch.batch.reader.NominaDocumentoItemReader;
-import cl.poc.atkbatch.batch.writer.NominaDocumentoItemWriter;
+import cl.poc.atkbatch.batch.writer.NominaResultItemWriter;
 import cl.poc.atkbatch.domain.ResultadoDocumento;
+import cl.poc.atkbatch.domain.ResultadoNomina;
 import cl.poc.atkbatch.domain.SimulatedDocumentoContable;
+import cl.poc.atkbatch.domain.SimulatedNomina;
 import cl.poc.atkbatch.service.BatchResultStore;
+import cl.poc.atkbatch.service.NominaResultXmlService;
 import cl.poc.atkbatch.service.NominaXmlParserService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -50,16 +55,39 @@ public class NominaBatchJobConfig {
     public Step processNominaDocumentosStep(
             JobRepository jobRepository,
             PlatformTransactionManager transactionManager,
-            ItemReader<SimulatedDocumentoContable> nominaDocumentoItemReader,
-            ItemProcessor<SimulatedDocumentoContable, ResultadoDocumento> nominaDocumentoItemProcessor,
-            ItemWriter<ResultadoDocumento> nominaDocumentoItemWriter,
+            ItemReader<SimulatedNomina> nominaItemReader,
+            ItemProcessor<SimulatedNomina, ResultadoNomina> nominaItemProcessor,
+            ItemWriter<ResultadoNomina> nominaResultItemWriter,
             @Value("${atk.batch.chunk-size}") int chunkSize) {
         return new StepBuilder(PROCESS_STEP_NAME, jobRepository)
-                .<SimulatedDocumentoContable, ResultadoDocumento>chunk(chunkSize, transactionManager)
-                .reader(nominaDocumentoItemReader)
-                .processor(nominaDocumentoItemProcessor)
-                .writer(nominaDocumentoItemWriter)
+                .<SimulatedNomina, ResultadoNomina>chunk(chunkSize, transactionManager)
+                .reader(nominaItemReader)
+                .processor(nominaItemProcessor)
+                .writer(nominaResultItemWriter)
                 .build();
+    }
+
+    @Bean
+    @StepScope
+    public NominaItemReader nominaItemReader(
+            NominaXmlParserService parserService,
+            @Value("${atk.batch.simulation-nominas}") int simulationNominas) {
+        return new NominaItemReader(parserService, simulationNominas);
+    }
+
+    @Bean
+    public NominaItemProcessor nominaItemProcessor(
+            NominaDocumentoItemProcessor nominaDocumentoItemProcessor,
+            NominaResultXmlService nominaResultXmlService) {
+        return new NominaItemProcessor(nominaDocumentoItemProcessor, nominaResultXmlService);
+    }
+
+    @Bean
+    @StepScope
+    public NominaResultItemWriter nominaResultItemWriter(
+            BatchResultStore batchResultStore,
+            @Value("#{stepExecution.jobExecutionId}") Long jobExecutionId) {
+        return new NominaResultItemWriter(batchResultStore, jobExecutionId);
     }
 
     @Bean
@@ -73,14 +101,6 @@ public class NominaBatchJobConfig {
     @Bean
     public NominaDocumentoItemProcessor nominaDocumentoItemProcessor() {
         return new NominaDocumentoItemProcessor();
-    }
-
-    @Bean
-    @StepScope
-    public NominaDocumentoItemWriter nominaDocumentoItemWriter(
-            BatchResultStore batchResultStore,
-            @Value("#{stepExecution.jobExecutionId}") Long jobExecutionId) {
-        return new NominaDocumentoItemWriter(batchResultStore, jobExecutionId);
     }
 
     private JobExecutionListener clearResultStoreListener(BatchResultStore batchResultStore) {

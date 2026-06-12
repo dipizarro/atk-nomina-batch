@@ -24,13 +24,16 @@ El endpoint `GET /api/v1/nominas/batch/{jobExecutionId}` consulta la metadata pe
 El endpoint `GET /api/v1/nominas/batch/{jobExecutionId}/summary` expone los totales funcionales almacenados en memoria
 para la POC.
 
+El endpoint `GET /api/v1/nominas/batch/{jobExecutionId}/results/{numeroNomina}` expone el resumen de una nomina
+procesada y el XML NOMFACTRES generado.
+
 ## Procesamiento chunk
 
-El job procesa documentos contables de nomina mediante `ItemReader`, `ItemProcessor` e `ItemWriter`.
+El job procesa nominas completas mediante `ItemReader`, `ItemProcessor` e `ItemWriter`.
 
-- Reader: parsea el XML SOAP Artikos local y simula masividad repitiendo los documentos segun `atk.batch.simulation-iterations`.
-- Processor: aplica validaciones POC sobre monto total, RUT de proveedor y tipo de documento.
-- Writer: registra totales por chunk y agrega resultados al store en memoria.
+- Reader: parsea una vez el XML SOAP Artikos local y simula una cola de nominas segun `atk.batch.simulation-nominas`.
+- Processor: procesa cada nomina completa, valida sus documentos y genera un NOMFACTRES por nomina.
+- Writer: registra totales por chunk y agrega resultados por `jobExecutionId` y `numeroNomina` al store en memoria.
 
 El tamano de chunk se configura con `atk.batch.chunk-size`.
 

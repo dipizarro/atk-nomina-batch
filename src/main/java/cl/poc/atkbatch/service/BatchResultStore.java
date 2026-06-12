@@ -1,70 +1,81 @@
 package cl.poc.atkbatch.service;
 
-import cl.poc.atkbatch.domain.ResultadoDocumento;
+import cl.poc.atkbatch.domain.ResultadoNomina;
 import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import org.springframework.stereotype.Service;
 
 @Service
 public class BatchResultStore {
 
-    private final Map<Long, List<ResultadoDocumento>> resultsByJobExecutionId = new ConcurrentHashMap<>();
+    private final Map<Long, Map<Long, ResultadoNomina>> nominaResultsByJobExecutionId = new ConcurrentHashMap<>();
 
     public void clearResults(Long jobExecutionId) {
-        resultsByJobExecutionId.remove(jobExecutionId);
+        nominaResultsByJobExecutionId.remove(jobExecutionId);
     }
 
-    public void addResults(Long jobExecutionId, List<? extends ResultadoDocumento> results) {
-        resultsByJobExecutionId.compute(jobExecutionId, (key, currentResults) -> {
-            List<ResultadoDocumento> updatedResults = currentResults == null ? new ArrayList<>() : new ArrayList<>(currentResults);
-            updatedResults.addAll(results);
+    public void addNominaResults(Long jobExecutionId, List<? extends ResultadoNomina> results) {
+        nominaResultsByJobExecutionId.compute(jobExecutionId, (key, currentResults) -> {
+            Map<Long, ResultadoNomina> updatedResults = currentResults == null
+                    ? new LinkedHashMap<>()
+                    : new LinkedHashMap<>(currentResults);
+            for (ResultadoNomina result : results) {
+                updatedResults.put(result.numeroNomina(), result);
+            }
             return updatedResults;
         });
     }
 
-    public List<ResultadoDocumento> getResults(Long jobExecutionId) {
-        return List.copyOf(resultsByJobExecutionId.getOrDefault(jobExecutionId, List.of()));
+    public List<ResultadoNomina> getNominaResults(Long jobExecutionId) {
+        return nominaResultsByJobExecutionId.getOrDefault(jobExecutionId, Map.of())
+                .values()
+                .stream()
+                .sorted(Comparator.comparing(ResultadoNomina::numeroNomina))
+                .toList();
+    }
+
+    public Optional<ResultadoNomina> getNominaResult(Long jobExecutionId, Long numeroNomina) {
+        return Optional.ofNullable(nominaResultsByJobExecutionId
+                .getOrDefault(jobExecutionId, Map.of())
+                .get(numeroNomina));
     }
 
     public BatchResultSummary getSummary(Long jobExecutionId) {
-        List<ResultadoDocumento> results = getResults(jobExecutionId);
+        List<ResultadoNomina> results = new ArrayList<>(getNominaResults(jobExecutionId));
 
-        long totalOk = results.stream().filter(ResultadoDocumento::isOk).count();
-        long totalNok = results.size() - totalOk;
-        long totalConciliaciones = results.stream()
-                .map(ResultadoDocumento::simulatedDocumento)
-                .mapToLong(item -> item.documentoOriginal().conciliaciones().size())
-                .sum();
-        long totalDistribuciones = results.stream()
-                .map(ResultadoDocumento::simulatedDocumento)
-                .flatMap(item -> item.documentoOriginal().conciliaciones().stream())
-                .mapToLong(conciliacion -> conciliacion.distribuciones().size())
-                .sum();
-        Long numeroNomina = results.stream()
-                .findFirst()
-                .map(ResultadoDocumento::simulatedDocumento)
-                .map(item -> item.numeroNomina())
-                .orElse(null);
+        long totalDocuments = results.stream().mapToLong(ResultadoNomina::totalDocuments).sum();
+        long totalOk = results.stream().mapToLong(ResultadoNomina::totalOk).sum();
+        long totalNok = results.stream().mapToLong(ResultadoNomina::totalNok).sum();
+        long totalConciliaciones = results.stream().mapToLong(ResultadoNomina::totalConciliaciones).sum();
+        long totalDistribuciones = results.stream().mapToLong(ResultadoNomina::totalDistribuciones).sum();
+        long nomfactresGenerated = results.stream()
+                .filter(result -> result.nomfactresXml() != null && !result.nomfactresXml().isBlank())
+                .count();
 
         return new BatchResultSummary(
                 jobExecutionId,
-                numeroNomina,
                 results.size(),
+                totalDocuments,
                 totalOk,
                 totalNok,
                 totalConciliaciones,
-                totalDistribuciones);
+                totalDistribuciones,
+                nomfactresGenerated);
     }
 
     public record BatchResultSummary(
             Long jobExecutionId,
-            Long numeroNomina,
-            long totalProcessed,
+            long totalNominas,
+            long totalDocuments,
             long totalOk,
             long totalNok,
             long totalConciliaciones,
-            long totalDistribuciones) {
+            long totalDistribuciones,
+            long nomfactresGenerated) {
     }
 }

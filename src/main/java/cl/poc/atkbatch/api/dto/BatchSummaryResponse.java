@@ -3,10 +3,11 @@ package cl.poc.atkbatch.api.dto;
 public record BatchSummaryResponse(
         Long jobExecutionId,
         String status,
-        Long numeroNomina,
-        long totalProcessed,
+        long totalNominas,
+        long totalDocuments,
         long totalOk,
         long totalNok,
         long totalConciliaciones,
-        long totalDistribuciones) {
+        long totalDistribuciones,
+        long nomfactresGenerated) {
 }

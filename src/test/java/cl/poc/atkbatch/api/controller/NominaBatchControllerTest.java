@@ -69,11 +69,33 @@ class NominaBatchControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.jobExecutionId").value(Integer.parseInt(jobExecutionId)))
                 .andExpect(jsonPath("$.status", is("COMPLETED")))
-                .andExpect(jsonPath("$.numeroNomina").value(15960))
-                .andExpect(jsonPath("$.totalProcessed").value(100))
-                .andExpect(jsonPath("$.totalOk").value(100))
+                .andExpect(jsonPath("$.totalNominas").value(1000))
+                .andExpect(jsonPath("$.totalDocuments").value(1000))
+                .andExpect(jsonPath("$.totalOk").value(1000))
                 .andExpect(jsonPath("$.totalNok").value(0))
-                .andExpect(jsonPath("$.totalConciliaciones").value(200))
-                .andExpect(jsonPath("$.totalDistribuciones").value(200));
+                .andExpect(jsonPath("$.totalConciliaciones").value(2000))
+                .andExpect(jsonPath("$.totalDistribuciones").value(2000))
+                .andExpect(jsonPath("$.nomfactresGenerated").value(1000));
+    }
+
+    @Test
+    void getNominaResultReturnsGeneratedNomfactresXml() throws Exception {
+        MvcResult startResult = mockMvc.perform(post("/api/v1/nominas/batch/start"))
+                .andExpect(status().isAccepted())
+                .andReturn();
+
+        String responseBody = startResult.getResponse().getContentAsString();
+        String jobExecutionId = responseBody.replaceAll(".*\"jobExecutionId\":(\\d+).*", "$1");
+
+        Thread.sleep(1_000L);
+
+        mockMvc.perform(get("/api/v1/nominas/batch/{jobExecutionId}/results/{numeroNomina}", jobExecutionId, 15960))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.jobExecutionId").value(Integer.parseInt(jobExecutionId)))
+                .andExpect(jsonPath("$.numeroNomina").value(15960))
+                .andExpect(jsonPath("$.totalDocuments").value(1))
+                .andExpect(jsonPath("$.totalOk").value(1))
+                .andExpect(jsonPath("$.totalNok").value(0))
+                .andExpect(jsonPath("$.nomfactresXml", org.hamcrest.Matchers.containsString("NOMFACTRES")));
     }
 }

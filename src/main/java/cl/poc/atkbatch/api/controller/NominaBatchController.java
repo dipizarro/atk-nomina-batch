@@ -2,6 +2,7 @@ package cl.poc.atkbatch.api.controller;
 
 import cl.poc.atkbatch.api.dto.BatchStatusResponse;
 import cl.poc.atkbatch.api.dto.BatchSummaryResponse;
+import cl.poc.atkbatch.api.dto.NominaResultResponse;
 import cl.poc.atkbatch.api.dto.StartBatchResponse;
 import cl.poc.atkbatch.service.BatchLauncherService;
 import cl.poc.atkbatch.service.BatchStatusService;
@@ -51,5 +52,13 @@ public class NominaBatchController {
     @GetMapping("/{jobExecutionId}/summary")
     public BatchSummaryResponse getBatchSummary(@PathVariable Long jobExecutionId) {
         return batchSummaryService.getSummary(jobExecutionId);
+    }
+
+    @Operation(summary = "Consulta el resultado de una nomina procesada")
+    @GetMapping("/{jobExecutionId}/results/{numeroNomina}")
+    public NominaResultResponse getNominaResult(
+            @PathVariable Long jobExecutionId,
+            @PathVariable Long numeroNomina) {
+        return batchSummaryService.getNominaResult(jobExecutionId, numeroNomina);
     }
 }
