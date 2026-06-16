@@ -47,6 +47,26 @@ public class NominaXmlParserService {
     public Nomina parse(Resource resource) {
         try {
             Document document = parseDocument(resource);
+            return parse(document);
+        } catch (NominaXmlParsingException exception) {
+            throw exception;
+        } catch (Exception exception) {
+            throw new NominaXmlParsingException("No fue posible parsear la nomina XML", exception);
+        }
+    }
+
+    public Nomina parseFromString(String xml) {
+        try {
+            Document document = parseDocument(xml);
+            return parse(document);
+        } catch (NominaXmlParsingException exception) {
+            throw exception;
+        } catch (Exception exception) {
+            throw new NominaXmlParsingException("No fue posible parsear la nomina XML", exception);
+        }
+    }
+
+    private Nomina parse(Document document) throws Exception {
             document.getDocumentElement().normalize();
 
             Element message = findRequiredMessage(document);
@@ -66,11 +86,6 @@ public class NominaXmlParserService {
                     text(messageId, "MsgFromAddress"),
                     parseHeader(cabeceraElement),
                     parseDocumentos(requiredChild(nominaElement, "Documentos")));
-        } catch (NominaXmlParsingException exception) {
-            throw exception;
-        } catch (Exception exception) {
-            throw new NominaXmlParsingException("No fue posible parsear la nomina XML", exception);
-        }
     }
 
     private Document parseDocument(Resource resource) throws Exception {
@@ -80,6 +95,11 @@ public class NominaXmlParserService {
         }
 
         InputSource inputSource = new InputSource(new StringReader(decodeXml(xmlBytes)));
+        return newDocumentBuilderFactory().newDocumentBuilder().parse(inputSource);
+    }
+
+    private Document parseDocument(String xml) throws Exception {
+        InputSource inputSource = new InputSource(new StringReader(xml));
         return newDocumentBuilderFactory().newDocumentBuilder().parse(inputSource);
     }
 
