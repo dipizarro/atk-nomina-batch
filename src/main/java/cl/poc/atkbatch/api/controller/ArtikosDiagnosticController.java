@@ -1,9 +1,13 @@
 package cl.poc.atkbatch.api.controller;
 
+import cl.poc.atkbatch.api.dto.ConfirmNominaRequest;
+import cl.poc.atkbatch.api.dto.ConfirmNominaResponse;
 import cl.poc.atkbatch.api.dto.FetchNominaRequest;
 import cl.poc.atkbatch.api.dto.FetchNominaResponse;
 import cl.poc.atkbatch.domain.Nomina;
+import cl.poc.atkbatch.domain.artikos.ArtikosGenericResponse;
 import cl.poc.atkbatch.domain.artikos.ArtikosProfileType;
+import cl.poc.atkbatch.service.artikos.ArtikosGenericSoapResponseParser;
 import cl.poc.atkbatch.service.artikos.ArtikosSoapClient;
 import cl.poc.atkbatch.service.artikos.ArtikosSoapClientException;
 import cl.poc.atkbatch.service.artikos.ArtikosSoapResponseParser;
@@ -32,12 +36,15 @@ public class ArtikosDiagnosticController {
 
     private final ArtikosSoapClient soapClient;
     private final ArtikosSoapResponseParser responseParser;
+    private final ArtikosGenericSoapResponseParser genericResponseParser;
 
     public ArtikosDiagnosticController(
             ArtikosSoapClient soapClient,
-            ArtikosSoapResponseParser responseParser) {
+            ArtikosSoapResponseParser responseParser,
+            ArtikosGenericSoapResponseParser genericResponseParser) {
         this.soapClient = soapClient;
         this.responseParser = responseParser;
+        this.genericResponseParser = genericResponseParser;
     }
 
     @PostMapping("/fetch")
@@ -71,6 +78,26 @@ public class ArtikosDiagnosticController {
                 parsedNomina.cabecera().tipoNomina(),
                 parsedNomina.cabecera().cantidadDocumentos(),
                 "Nomina recibida correctamente desde Artikos");
+    }
+
+    @PostMapping("/confirm")
+    @Operation(summary = "Confirma recepcion de nomina en Artikos QA con NOMFACTCONFIR")
+    public ConfirmNominaResponse confirmNomina(@Valid @RequestBody ConfirmNominaRequest request) {
+        ArtikosProfileType profileType = parseProfile(request.profile());
+        String rawXml = soapClient.confirmNominaRawXml(
+                profileType,
+                request.numeroNomina(),
+                request.estadoRespuesta());
+        ArtikosGenericResponse response = genericResponseParser.parseGenericResponse(rawXml);
+
+        return new ConfirmNominaResponse(
+                profileType.name(),
+                request.numeroNomina(),
+                response.success(),
+                response.msgStatus(),
+                response.success()
+                        ? "Confirmacion enviada correctamente a Artikos"
+                        : response.messageText());
     }
 
     private ArtikosProfileType parseProfile(String profile) {

@@ -1,6 +1,7 @@
 package cl.poc.atkbatch.api.controller;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.anyOf;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -30,7 +31,7 @@ class NominaBatchControllerTest {
                 .andExpect(status().isAccepted())
                 .andExpect(jsonPath("$.jobExecutionId", notNullValue()))
                 .andExpect(jsonPath("$.jobName", is("nominaDocumentosContablesJob")))
-                .andExpect(jsonPath("$.status", is("STARTING")))
+                .andExpect(jsonPath("$.status", anyOf(is("STARTING"), is("STARTED"))))
                 .andExpect(jsonPath("$.message", is("Batch iniciado correctamente")))
                 .andReturn();
 

@@ -12,6 +12,8 @@ public class ArtikosProperties {
     private String nominaUrl;
     private String connectorUrl;
     private String soapAction = "";
+    private String nominaSoapAction = "";
+    private String connectorSoapAction = "";
     private Map<ArtikosProfileType, ArtikosProfileConfig> profiles = new EnumMap<>(ArtikosProfileType.class);
 
     public String getNominaUrl() {
@@ -36,6 +38,22 @@ public class ArtikosProperties {
 
     public void setSoapAction(String soapAction) {
         this.soapAction = soapAction;
+    }
+
+    public String getNominaSoapAction() {
+        return nominaSoapAction;
+    }
+
+    public void setNominaSoapAction(String nominaSoapAction) {
+        this.nominaSoapAction = nominaSoapAction;
+    }
+
+    public String getConnectorSoapAction() {
+        return connectorSoapAction;
+    }
+
+    public void setConnectorSoapAction(String connectorSoapAction) {
+        this.connectorSoapAction = connectorSoapAction;
     }
 
     public Map<ArtikosProfileType, ArtikosProfileConfig> getProfiles() {
