@@ -9,7 +9,7 @@ Entregables:
 - Proyecto Maven base.
 - Dependencias iniciales.
 - Estructura de paquetes.
-- Configuracion `application.yml`.
+- Configuracion `application.properties`.
 - Endpoint `GET /api/v1/health`.
 - Documentacion inicial.
 - Pruebas con `mvn clean test`.

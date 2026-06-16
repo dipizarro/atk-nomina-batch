@@ -12,7 +12,8 @@ public record ResultadoNomina(
         Integer totalDistribuciones,
         List<ResultadoDocumento> documentos,
         String nomfactresXml,
-        String status) {
+        String status,
+        String errorMessage) {
 
     public ResultadoNomina withJobExecutionId(Long newJobExecutionId) {
         return new ResultadoNomina(
@@ -25,6 +26,7 @@ public record ResultadoNomina(
                 totalDistribuciones,
                 documentos,
                 nomfactresXml,
-                status);
+                status,
+                errorMessage);
     }
 }

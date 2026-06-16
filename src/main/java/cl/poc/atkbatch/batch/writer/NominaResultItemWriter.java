@@ -2,6 +2,7 @@ package cl.poc.atkbatch.batch.writer;
 
 import cl.poc.atkbatch.domain.ResultadoNomina;
 import cl.poc.atkbatch.service.BatchResultStore;
+import cl.poc.atkbatch.service.ControlNominaService;
 import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -13,10 +14,15 @@ public class NominaResultItemWriter implements ItemWriter<ResultadoNomina> {
     private static final Logger LOGGER = LoggerFactory.getLogger(NominaResultItemWriter.class);
 
     private final BatchResultStore batchResultStore;
+    private final ControlNominaService controlNominaService;
     private final Long jobExecutionId;
 
-    public NominaResultItemWriter(BatchResultStore batchResultStore, Long jobExecutionId) {
+    public NominaResultItemWriter(
+            BatchResultStore batchResultStore,
+            ControlNominaService controlNominaService,
+            Long jobExecutionId) {
         this.batchResultStore = batchResultStore;
+        this.controlNominaService = controlNominaService;
         this.jobExecutionId = jobExecutionId;
     }
 
@@ -37,6 +43,17 @@ public class NominaResultItemWriter implements ItemWriter<ResultadoNomina> {
                 totalNok,
                 nomfactresGenerated);
 
+        for (ResultadoNomina result : results) {
+            if ("ERROR".equals(result.status())) {
+                LOGGER.info("[CONTROL_NOMINA] ERROR jobExecutionId={} numeroNomina={} error={}",
+                        result.jobExecutionId(), result.numeroNomina(), result.errorMessage());
+                controlNominaService.markError(result.jobExecutionId(), result.numeroNomina(), result.errorMessage());
+            } else {
+                LOGGER.info("[CONTROL_NOMINA] COMPLETED jobExecutionId={} numeroNomina={} status={}",
+                        result.jobExecutionId(), result.numeroNomina(), result.status());
+                controlNominaService.markCompleted(result);
+            }
+        }
         batchResultStore.addNominaResults(jobExecutionId, results);
     }
 }

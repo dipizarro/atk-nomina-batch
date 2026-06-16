@@ -1,5 +1,8 @@
 target/
+logs/
+reference-oracle-app/
 .mvn/wrapper/maven-wrapper.jar
+src/main/resources/application-local.properties
 
 ### IDE ###
 .idea/

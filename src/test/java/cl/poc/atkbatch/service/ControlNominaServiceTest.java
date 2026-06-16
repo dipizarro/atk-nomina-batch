@@ -1,0 +1,116 @@
+package cl.poc.atkbatch.service;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
+import cl.poc.atkbatch.domain.ControlNominaEntity;
+import cl.poc.atkbatch.domain.ControlNominaStatus;
+import cl.poc.atkbatch.domain.ResultadoNomina;
+import cl.poc.atkbatch.repository.ControlNominaJpaRepository;
+import java.util.List;
+import java.util.Optional;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+
+@ExtendWith(MockitoExtension.class)
+class ControlNominaServiceTest {
+
+    @Mock
+    private ControlNominaJpaRepository repository;
+
+    @InjectMocks
+    private ControlNominaService service;
+
+    @Test
+    void markProcessingCreatesProcessingEntity() {
+        when(repository.findByIdJobExecutionIdAndIdNumeroNomina(1L, 15960L)).thenReturn(Optional.empty());
+        when(repository.save(any(ControlNominaEntity.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        ControlNominaEntity result = service.markProcessing(1L, 15960L);
+
+        assertThat(result.getJobExecutionId()).isEqualTo(1L);
+        assertThat(result.getNumeroNomina()).isEqualTo(15960L);
+        assertThat(result.getStatus()).isEqualTo(ControlNominaStatus.PROCESSING);
+        assertThat(result.getCreatedAt()).isNotNull();
+        verify(repository).save(any(ControlNominaEntity.class));
+    }
+
+    @Test
+    void markCompletedSetsOkWhenTotalNokIsZero() {
+        when(repository.findByIdJobExecutionIdAndIdNumeroNomina(1L, 15960L)).thenReturn(Optional.of(baseEntity()));
+        when(repository.save(any(ControlNominaEntity.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        ControlNominaEntity result = service.markCompleted(resultadoNomina(0));
+
+        assertThat(result.getStatus()).isEqualTo(ControlNominaStatus.OK);
+        assertThat(result.getTotalDocuments()).isEqualTo(1);
+        assertThat(result.getTotalOk()).isEqualTo(1);
+        assertThat(result.getTotalNok()).isZero();
+        assertThat(result.getUpdatedAt()).isNotNull();
+    }
+
+    @Test
+    void markCompletedSetsNokWhenTotalNokIsGreaterThanZero() {
+        when(repository.findByIdJobExecutionIdAndIdNumeroNomina(1L, 15960L)).thenReturn(Optional.of(baseEntity()));
+        when(repository.save(any(ControlNominaEntity.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        ControlNominaEntity result = service.markCompleted(resultadoNomina(1));
+
+        assertThat(result.getStatus()).isEqualTo(ControlNominaStatus.NOK);
+        assertThat(result.getTotalNok()).isEqualTo(1);
+    }
+
+    @Test
+    void markErrorSetsErrorStatus() {
+        when(repository.findByIdJobExecutionIdAndIdNumeroNomina(1L, 15960L)).thenReturn(Optional.of(baseEntity()));
+        when(repository.save(any(ControlNominaEntity.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        ControlNominaEntity result = service.markError(1L, 15960L, "boom");
+
+        assertThat(result.getStatus()).isEqualTo(ControlNominaStatus.ERROR);
+        assertThat(result.getErrorMessage()).isEqualTo("boom");
+        assertThat(result.getUpdatedAt()).isNotNull();
+    }
+
+    @Test
+    void markErrorTrimsLongErrorMessage() {
+        when(repository.findByIdJobExecutionIdAndIdNumeroNomina(1L, 15960L)).thenReturn(Optional.empty());
+        when(repository.save(any(ControlNominaEntity.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        service.markError(1L, 15960L, "x".repeat(600));
+
+        ArgumentCaptor<ControlNominaEntity> captor = ArgumentCaptor.forClass(ControlNominaEntity.class);
+        verify(repository).save(captor.capture());
+        assertThat(captor.getValue().getErrorMessage()).hasSize(500);
+    }
+
+    private ControlNominaEntity baseEntity() {
+        ControlNominaEntity entity = new ControlNominaEntity();
+        entity.setJobExecutionId(1L);
+        entity.setNumeroNomina(15960L);
+        entity.setStatus(ControlNominaStatus.PROCESSING);
+        return entity;
+    }
+
+    private ResultadoNomina resultadoNomina(Integer totalNok) {
+        return new ResultadoNomina(
+                1L,
+                15960L,
+                1,
+                totalNok == 0 ? 1 : 0,
+                totalNok,
+                2,
+                2,
+                List.of(),
+                "<NOMFACTRES/>",
+                totalNok == 0 ? "OK" : "NOK",
+                null);
+    }
+}
+

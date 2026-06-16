@@ -1,6 +1,8 @@
 package cl.poc.atkbatch.batch;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 
 import cl.poc.atkbatch.batch.processor.NominaDocumentoItemProcessor;
 import cl.poc.atkbatch.batch.processor.NominaItemProcessor;
@@ -8,6 +10,7 @@ import cl.poc.atkbatch.batch.reader.NominaItemReader;
 import cl.poc.atkbatch.domain.ResultadoNomina;
 import cl.poc.atkbatch.domain.SimulatedNomina;
 import cl.poc.atkbatch.service.BatchResultStore;
+import cl.poc.atkbatch.service.ControlNominaService;
 import cl.poc.atkbatch.service.NominaResultXmlService;
 import cl.poc.atkbatch.service.NominaXmlParserService;
 import java.util.ArrayList;
@@ -19,9 +22,12 @@ class NominaQueueProcessingTest {
 
     private final NominaXmlParserService parserService = new NominaXmlParserService(
             new ClassPathResource("samples/ZSVIDA_Nom15960.xml"));
+    private final ControlNominaService controlNominaService = mock(ControlNominaService.class);
     private final NominaItemProcessor processor = new NominaItemProcessor(
             new NominaDocumentoItemProcessor(),
-            new NominaResultXmlService());
+            new NominaResultXmlService(),
+            controlNominaService,
+            7L);
 
     @Test
     void readerGeneratesOneThousandSimulatedNominas() throws Exception {
@@ -38,7 +44,9 @@ class NominaQueueProcessingTest {
 
         ResultadoNomina result = processor.process(nomina);
 
+        verify(controlNominaService).markProcessing(7L, 15960L);
         assertThat(result.numeroNomina()).isEqualTo(15960L);
+        assertThat(result.jobExecutionId()).isEqualTo(7L);
         assertThat(result.totalDocuments()).isEqualTo(1);
         assertThat(result.totalOk()).isEqualTo(1);
         assertThat(result.totalNok()).isZero();
@@ -52,7 +60,7 @@ class NominaQueueProcessingTest {
         BatchResultStore store = new BatchResultStore();
         List<ResultadoNomina> results = new ArrayList<>();
         for (SimulatedNomina nomina : readAll(new NominaItemReader(parserService, 1000))) {
-            results.add(processor.process(nomina).withJobExecutionId(7L));
+            results.add(processor.process(nomina));
         }
 
         store.addNominaResults(7L, results);

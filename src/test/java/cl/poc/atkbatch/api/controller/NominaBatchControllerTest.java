@@ -26,15 +26,19 @@ class NominaBatchControllerTest {
     void startBatchRespondsImmediately() throws Exception {
         long startedAt = System.nanoTime();
 
-        mockMvc.perform(post("/api/v1/nominas/batch/start"))
+        MvcResult startResult = mockMvc.perform(post("/api/v1/nominas/batch/start"))
                 .andExpect(status().isAccepted())
                 .andExpect(jsonPath("$.jobExecutionId", notNullValue()))
                 .andExpect(jsonPath("$.jobName", is("nominaDocumentosContablesJob")))
                 .andExpect(jsonPath("$.status", is("STARTING")))
-                .andExpect(jsonPath("$.message", is("Batch iniciado correctamente")));
+                .andExpect(jsonPath("$.message", is("Batch iniciado correctamente")))
+                .andReturn();
 
         long elapsedMillis = (System.nanoTime() - startedAt) / 1_000_000;
         assertThat(elapsedMillis).isLessThan(2_000L);
+
+        String jobExecutionId = extractJobExecutionId(startResult);
+        waitForJobStatus(jobExecutionId, "COMPLETED");
     }
 
     @Test
@@ -43,8 +47,7 @@ class NominaBatchControllerTest {
                 .andExpect(status().isAccepted())
                 .andReturn();
 
-        String responseBody = startResult.getResponse().getContentAsString();
-        String jobExecutionId = responseBody.replaceAll(".*\"jobExecutionId\":(\\d+).*", "$1");
+        String jobExecutionId = extractJobExecutionId(startResult);
 
         mockMvc.perform(get("/api/v1/nominas/batch/{jobExecutionId}", jobExecutionId))
                 .andExpect(status().isOk())
@@ -52,6 +55,8 @@ class NominaBatchControllerTest {
                 .andExpect(jsonPath("$.jobName", is("nominaDocumentosContablesJob")))
                 .andExpect(jsonPath("$.status", notNullValue()))
                 .andExpect(jsonPath("$.exitStatus", notNullValue()));
+
+        waitForJobStatus(jobExecutionId, "COMPLETED");
     }
 
     @Test
@@ -60,10 +65,9 @@ class NominaBatchControllerTest {
                 .andExpect(status().isAccepted())
                 .andReturn();
 
-        String responseBody = startResult.getResponse().getContentAsString();
-        String jobExecutionId = responseBody.replaceAll(".*\"jobExecutionId\":(\\d+).*", "$1");
+        String jobExecutionId = extractJobExecutionId(startResult);
 
-        Thread.sleep(1_000L);
+        waitForJobStatus(jobExecutionId, "COMPLETED");
 
         mockMvc.perform(get("/api/v1/nominas/batch/{jobExecutionId}/summary", jobExecutionId))
                 .andExpect(status().isOk())
@@ -84,10 +88,9 @@ class NominaBatchControllerTest {
                 .andExpect(status().isAccepted())
                 .andReturn();
 
-        String responseBody = startResult.getResponse().getContentAsString();
-        String jobExecutionId = responseBody.replaceAll(".*\"jobExecutionId\":(\\d+).*", "$1");
+        String jobExecutionId = extractJobExecutionId(startResult);
 
-        Thread.sleep(1_000L);
+        waitForJobStatus(jobExecutionId, "COMPLETED");
 
         mockMvc.perform(get("/api/v1/nominas/batch/{jobExecutionId}/results/{numeroNomina}", jobExecutionId, 15960))
                 .andExpect(status().isOk())
@@ -97,5 +100,29 @@ class NominaBatchControllerTest {
                 .andExpect(jsonPath("$.totalOk").value(1))
                 .andExpect(jsonPath("$.totalNok").value(0))
                 .andExpect(jsonPath("$.nomfactresXml", org.hamcrest.Matchers.containsString("NOMFACTRES")));
+    }
+
+    private String extractJobExecutionId(MvcResult result) throws Exception {
+        String responseBody = result.getResponse().getContentAsString();
+        return responseBody.replaceAll(".*\"jobExecutionId\":(\\d+).*", "$1");
+    }
+
+    private void waitForJobStatus(String jobExecutionId, String expectedStatus) throws Exception {
+        long deadline = System.currentTimeMillis() + 15_000L;
+        String currentStatus = null;
+
+        while (System.currentTimeMillis() < deadline) {
+            MvcResult result = mockMvc.perform(get("/api/v1/nominas/batch/{jobExecutionId}", jobExecutionId))
+                    .andExpect(status().isOk())
+                    .andReturn();
+            String responseBody = result.getResponse().getContentAsString();
+            currentStatus = responseBody.replaceAll(".*\"status\":\"([^\"]+)\".*", "$1");
+            if (expectedStatus.equals(currentStatus)) {
+                return;
+            }
+            Thread.sleep(250L);
+        }
+
+        assertThat(currentStatus).isEqualTo(expectedStatus);
     }
 }

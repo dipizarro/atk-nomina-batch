@@ -10,6 +10,7 @@ import cl.poc.atkbatch.domain.ResultadoNomina;
 import cl.poc.atkbatch.domain.SimulatedDocumentoContable;
 import cl.poc.atkbatch.domain.SimulatedNomina;
 import cl.poc.atkbatch.service.BatchResultStore;
+import cl.poc.atkbatch.service.ControlNominaService;
 import cl.poc.atkbatch.service.NominaResultXmlService;
 import cl.poc.atkbatch.service.NominaXmlParserService;
 import org.slf4j.Logger;
@@ -76,18 +77,26 @@ public class NominaBatchJobConfig {
     }
 
     @Bean
+    @StepScope
     public NominaItemProcessor nominaItemProcessor(
             NominaDocumentoItemProcessor nominaDocumentoItemProcessor,
-            NominaResultXmlService nominaResultXmlService) {
-        return new NominaItemProcessor(nominaDocumentoItemProcessor, nominaResultXmlService);
+            NominaResultXmlService nominaResultXmlService,
+            ControlNominaService controlNominaService,
+            @Value("#{stepExecution.jobExecutionId}") Long jobExecutionId) {
+        return new NominaItemProcessor(
+                nominaDocumentoItemProcessor,
+                nominaResultXmlService,
+                controlNominaService,
+                jobExecutionId);
     }
 
     @Bean
     @StepScope
     public NominaResultItemWriter nominaResultItemWriter(
             BatchResultStore batchResultStore,
+            ControlNominaService controlNominaService,
             @Value("#{stepExecution.jobExecutionId}") Long jobExecutionId) {
-        return new NominaResultItemWriter(batchResultStore, jobExecutionId);
+        return new NominaResultItemWriter(batchResultStore, controlNominaService, jobExecutionId);
     }
 
     @Bean

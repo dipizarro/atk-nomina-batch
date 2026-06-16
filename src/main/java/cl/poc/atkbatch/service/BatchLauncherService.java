@@ -9,10 +9,14 @@ import org.springframework.batch.core.JobParameters;
 import org.springframework.batch.core.JobParametersBuilder;
 import org.springframework.batch.core.launch.JobLauncher;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 @Service
 public class BatchLauncherService {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(BatchLauncherService.class);
 
     private final JobLauncher jobLauncher;
     private final Job nominaDocumentosContablesJob;
@@ -25,10 +29,14 @@ public class BatchLauncherService {
 
     public StartBatchResponse startNominaBatch() {
         try {
+            Long runId = nextRunId();
             JobParameters parameters = new JobParametersBuilder()
-                    .addLong("run.id", nextRunId())
+                    .addLong("run.id", runId)
                     .toJobParameters();
+            LOGGER.info("Launching nomina batch job={} runId={}", NominaBatchJobConfig.JOB_NAME, runId);
             JobExecution execution = jobLauncher.run(nominaDocumentosContablesJob, parameters);
+            LOGGER.info("Nomina batch accepted jobExecutionId={} status={}",
+                    execution.getId(), execution.getStatus());
 
             return new StartBatchResponse(
                     execution.getId(),
@@ -36,6 +44,7 @@ public class BatchLauncherService {
                     execution.getStatus().name(),
                     "Batch iniciado correctamente");
         } catch (Exception exception) {
+            LOGGER.error("Failed to launch nomina batch job={}", NominaBatchJobConfig.JOB_NAME, exception);
             throw new IllegalStateException("No fue posible iniciar el batch de nominas", exception);
         }
     }

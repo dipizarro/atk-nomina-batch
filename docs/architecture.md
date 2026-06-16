@@ -39,16 +39,29 @@ El tamano de chunk se configura con `atk.batch.chunk-size`.
 
 ## Persistencia y metadata batch
 
-La POC usa H2 en memoria con modo compatible Oracle:
+Los tests usan H2 en memoria con modo compatible Oracle:
 
 ```yaml
 spring.datasource.url: jdbc:h2:mem:atk_nomina_batch;MODE=Oracle;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
 ```
 
-Spring Batch puede crear sus tablas de metadata automaticamente mediante:
+En tests, Spring Batch crea sus tablas de metadata automaticamente mediante:
 
 ```yaml
 spring.batch.jdbc.initialize-schema: always
+```
+
+En ejecucion local contra Oracle, la aplicacion usa `spring.batch.jdbc.initialize-schema=never`. Las tablas de metadata
+`BATCH_*` deben existir antes de invocar `POST /api/v1/nominas/batch/start`, ejecutando:
+
+```text
+src/main/resources/db/oracle/V000__create_spring_batch_metadata.sql
+```
+
+La tabla funcional de control por nomina se crea con:
+
+```text
+src/main/resources/db/oracle/V001__create_control_nomina.sql
 ```
 
 ## Paquetes base
