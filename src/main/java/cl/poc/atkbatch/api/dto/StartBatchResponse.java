@@ -4,5 +4,8 @@ public record StartBatchResponse(
         Long jobExecutionId,
         String jobName,
         String status,
-        String message) {
+        String message,
+        String profile,
+        Integer maxNominas,
+        Boolean dryRun) {
 }

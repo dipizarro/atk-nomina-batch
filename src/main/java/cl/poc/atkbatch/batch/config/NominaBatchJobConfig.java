@@ -1,18 +1,26 @@
 package cl.poc.atkbatch.batch.config;
 
+import cl.poc.atkbatch.batch.processor.ArtikosNominaItemProcessor;
 import cl.poc.atkbatch.batch.processor.NominaItemProcessor;
 import cl.poc.atkbatch.batch.processor.NominaDocumentoItemProcessor;
+import cl.poc.atkbatch.batch.reader.ArtikosNominaItemReader;
 import cl.poc.atkbatch.batch.reader.NominaItemReader;
 import cl.poc.atkbatch.batch.reader.NominaDocumentoItemReader;
+import cl.poc.atkbatch.batch.writer.ArtikosNominaResultItemWriter;
 import cl.poc.atkbatch.batch.writer.NominaResultItemWriter;
 import cl.poc.atkbatch.domain.ResultadoDocumento;
 import cl.poc.atkbatch.domain.ResultadoNomina;
 import cl.poc.atkbatch.domain.SimulatedDocumentoContable;
 import cl.poc.atkbatch.domain.SimulatedNomina;
+import cl.poc.atkbatch.domain.artikos.ArtikosFetchedNomina;
 import cl.poc.atkbatch.service.BatchResultStore;
 import cl.poc.atkbatch.service.ControlNominaService;
 import cl.poc.atkbatch.service.NominaResultXmlService;
 import cl.poc.atkbatch.service.NominaXmlParserService;
+import cl.poc.atkbatch.service.NominaProcessingService;
+import cl.poc.atkbatch.service.artikos.ArtikosGenericSoapResponseParser;
+import cl.poc.atkbatch.service.artikos.ArtikosSoapClient;
+import cl.poc.atkbatch.service.artikos.ArtikosSoapResponseParser;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.batch.core.JobExecution;
@@ -56,16 +64,65 @@ public class NominaBatchJobConfig {
     public Step processNominaDocumentosStep(
             JobRepository jobRepository,
             PlatformTransactionManager transactionManager,
-            ItemReader<SimulatedNomina> nominaItemReader,
-            ItemProcessor<SimulatedNomina, ResultadoNomina> nominaItemProcessor,
-            ItemWriter<ResultadoNomina> nominaResultItemWriter,
-            @Value("${atk.batch.chunk-size}") int chunkSize) {
+            ItemReader<ArtikosFetchedNomina> artikosNominaItemReader,
+            ItemProcessor<ArtikosFetchedNomina, ResultadoNomina> artikosNominaItemProcessor,
+            ItemWriter<ResultadoNomina> artikosNominaResultItemWriter,
+            @Value("${atk.batch.real.chunk-size}") int chunkSize) {
         return new StepBuilder(PROCESS_STEP_NAME, jobRepository)
-                .<SimulatedNomina, ResultadoNomina>chunk(chunkSize, transactionManager)
-                .reader(nominaItemReader)
-                .processor(nominaItemProcessor)
-                .writer(nominaResultItemWriter)
+                .<ArtikosFetchedNomina, ResultadoNomina>chunk(chunkSize, transactionManager)
+                .reader(artikosNominaItemReader)
+                .processor(artikosNominaItemProcessor)
+                .writer(artikosNominaResultItemWriter)
                 .build();
+    }
+
+    @Bean
+    @StepScope
+    public ArtikosNominaItemReader artikosNominaItemReader(
+            ArtikosSoapClient soapClient,
+            ArtikosSoapResponseParser responseParser,
+            @Value("#{jobParameters['profile']}") String profile,
+            @Value("#{jobParameters['maxNominas']}") Long maxNominas,
+            @Value("#{jobParameters['dryRun']}") String dryRun) {
+        return new ArtikosNominaItemReader(soapClient, responseParser, profile, maxNominas, dryRun);
+    }
+
+    @Bean
+    @StepScope
+    public ArtikosNominaItemProcessor artikosNominaItemProcessor(
+            ControlNominaService controlNominaService,
+            ArtikosSoapClient soapClient,
+            ArtikosGenericSoapResponseParser genericResponseParser,
+            NominaProcessingService nominaProcessingService,
+            @Value("#{stepExecution.jobExecutionId}") Long jobExecutionId,
+            @Value("#{jobParameters['dryRun']}") String dryRun) {
+        return new ArtikosNominaItemProcessor(
+                controlNominaService,
+                soapClient,
+                genericResponseParser,
+                nominaProcessingService,
+                jobExecutionId,
+                dryRun);
+    }
+
+    @Bean
+    @StepScope
+    public ArtikosNominaResultItemWriter artikosNominaResultItemWriter(
+            ArtikosSoapClient soapClient,
+            ArtikosGenericSoapResponseParser genericResponseParser,
+            ControlNominaService controlNominaService,
+            BatchResultStore batchResultStore,
+            @Value("#{jobParameters['profile']}") String profile,
+            @Value("#{jobParameters['dryRun']}") String dryRun,
+            @Value("#{stepExecution.jobExecutionId}") Long jobExecutionId) {
+        return new ArtikosNominaResultItemWriter(
+                soapClient,
+                genericResponseParser,
+                controlNominaService,
+                batchResultStore,
+                profile,
+                dryRun,
+                jobExecutionId);
     }
 
     @Bean
@@ -118,6 +175,9 @@ public class NominaBatchJobConfig {
             public void beforeJob(JobExecution jobExecution) {
                 LOGGER.info("Limpiando resultados en memoria para jobExecutionId={}", jobExecution.getId());
                 batchResultStore.clearResults(jobExecution.getId());
+                String profile = jobExecution.getJobParameters().getString("profile");
+                String dryRun = jobExecution.getJobParameters().getString("dryRun");
+                batchResultStore.putMetadata(jobExecution.getId(), profile, Boolean.parseBoolean(dryRun));
             }
         };
     }

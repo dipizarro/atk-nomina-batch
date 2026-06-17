@@ -9,5 +9,7 @@ public record BatchSummaryResponse(
         long totalNok,
         long totalConciliaciones,
         long totalDistribuciones,
-        long nomfactresGenerated) {
+        long nomfactresGenerated,
+        String profile,
+        Boolean dryRun) {
 }

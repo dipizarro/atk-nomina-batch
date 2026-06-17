@@ -14,9 +14,15 @@ import org.springframework.stereotype.Service;
 public class BatchResultStore {
 
     private final Map<Long, Map<Long, ResultadoNomina>> nominaResultsByJobExecutionId = new ConcurrentHashMap<>();
+    private final Map<Long, BatchExecutionMetadata> metadataByJobExecutionId = new ConcurrentHashMap<>();
 
     public void clearResults(Long jobExecutionId) {
         nominaResultsByJobExecutionId.remove(jobExecutionId);
+        metadataByJobExecutionId.remove(jobExecutionId);
+    }
+
+    public void putMetadata(Long jobExecutionId, String profile, boolean dryRun) {
+        metadataByJobExecutionId.put(jobExecutionId, new BatchExecutionMetadata(profile, dryRun));
     }
 
     public void addNominaResults(Long jobExecutionId, List<? extends ResultadoNomina> results) {
@@ -65,7 +71,17 @@ public class BatchResultStore {
                 totalNok,
                 totalConciliaciones,
                 totalDistribuciones,
-                nomfactresGenerated);
+                nomfactresGenerated,
+                metadataByJobExecutionId.get(jobExecutionId));
+    }
+
+    public Optional<BatchExecutionMetadata> getMetadata(Long jobExecutionId) {
+        return Optional.ofNullable(metadataByJobExecutionId.get(jobExecutionId));
+    }
+
+    public record BatchExecutionMetadata(
+            String profile,
+            boolean dryRun) {
     }
 
     public record BatchResultSummary(
@@ -76,6 +92,7 @@ public class BatchResultStore {
             long totalNok,
             long totalConciliaciones,
             long totalDistribuciones,
-            long nomfactresGenerated) {
+            long nomfactresGenerated,
+            BatchExecutionMetadata metadata) {
     }
 }

@@ -23,7 +23,7 @@ CREATE INDEX IDX_CONTROL_NOMINA_STATUS
 CREATE INDEX IDX_CONTROL_NOMINA_NUMERO
     ON CONTROL_NOMINA (NUMERO_NOMINA);
 
-COMMENT ON TABLE CONTROL_NOMINA IS 'Control de estado de procesamiento por nomina Artikos en la POC batch.';
+COMMENT ON TABLE CONTROL_NOMINA IS 'Control de estado de procesamiento por nomina Artikos.';
 
 COMMENT ON COLUMN CONTROL_NOMINA.JOB_EXECUTION_ID IS 'Identificador de ejecucion Spring Batch asociado.';
 COMMENT ON COLUMN CONTROL_NOMINA.NUMERO_NOMINA IS 'Numero de nomina Artikos procesada.';

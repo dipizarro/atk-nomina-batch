@@ -8,11 +8,20 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.when;
 
+import cl.poc.atkbatch.domain.artikos.ArtikosOperationConfig;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.BeforeEach;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.core.io.ClassPathResource;
+import org.springframework.util.StreamUtils;
+import cl.poc.atkbatch.service.artikos.ArtikosSoapClient;
+import java.nio.charset.StandardCharsets;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
@@ -22,6 +31,15 @@ class NominaBatchControllerTest {
 
     @Autowired
     private MockMvc mockMvc;
+
+    @MockBean
+    private ArtikosSoapClient soapClient;
+
+    @BeforeEach
+    void setUp() throws Exception {
+        when(soapClient.fetchNominaRawXml(any())).thenReturn(sampleNominaXml());
+        when(soapClient.resultadoNominaConfig(any())).thenReturn(resultadoOperationConfig());
+    }
 
     @Test
     void startBatchRespondsImmediately() throws Exception {
@@ -33,6 +51,9 @@ class NominaBatchControllerTest {
                 .andExpect(jsonPath("$.jobName", is("nominaDocumentosContablesJob")))
                 .andExpect(jsonPath("$.status", anyOf(is("STARTING"), is("STARTED"))))
                 .andExpect(jsonPath("$.message", is("Batch iniciado correctamente")))
+                .andExpect(jsonPath("$.profile", is("GENERALES")))
+                .andExpect(jsonPath("$.maxNominas", is(1)))
+                .andExpect(jsonPath("$.dryRun", is(true)))
                 .andReturn();
 
         long elapsedMillis = (System.nanoTime() - startedAt) / 1_000_000;
@@ -74,13 +95,15 @@ class NominaBatchControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.jobExecutionId").value(Integer.parseInt(jobExecutionId)))
                 .andExpect(jsonPath("$.status", is("COMPLETED")))
-                .andExpect(jsonPath("$.totalNominas").value(1000))
-                .andExpect(jsonPath("$.totalDocuments").value(1000))
-                .andExpect(jsonPath("$.totalOk").value(1000))
+                .andExpect(jsonPath("$.totalNominas").value(1))
+                .andExpect(jsonPath("$.totalDocuments").value(1))
+                .andExpect(jsonPath("$.totalOk").value(1))
                 .andExpect(jsonPath("$.totalNok").value(0))
-                .andExpect(jsonPath("$.totalConciliaciones").value(2000))
-                .andExpect(jsonPath("$.totalDistribuciones").value(2000))
-                .andExpect(jsonPath("$.nomfactresGenerated").value(1000));
+                .andExpect(jsonPath("$.totalConciliaciones").value(2))
+                .andExpect(jsonPath("$.totalDistribuciones").value(2))
+                .andExpect(jsonPath("$.nomfactresGenerated").value(1))
+                .andExpect(jsonPath("$.profile").value("GENERALES"))
+                .andExpect(jsonPath("$.dryRun").value(true));
     }
 
     @Test
@@ -125,5 +148,20 @@ class NominaBatchControllerTest {
         }
 
         assertThat(currentStatus).isEqualTo(expectedStatus);
+    }
+
+    private String sampleNominaXml() throws Exception {
+        return StreamUtils.copyToString(
+                new ClassPathResource("samples/ZSVIDA_Nom15960.xml").getInputStream(),
+                StandardCharsets.UTF_8);
+    }
+
+    private ArtikosOperationConfig resultadoOperationConfig() {
+        ArtikosOperationConfig operationConfig = new ArtikosOperationConfig();
+        operationConfig.setMsgCode("NOMFACTRES");
+        operationConfig.setMsgFromAddress("ZSGRALES");
+        operationConfig.setMsgToAddress("ARTIKOS");
+        operationConfig.setMsgCodSis("SAF");
+        return operationConfig;
     }
 }

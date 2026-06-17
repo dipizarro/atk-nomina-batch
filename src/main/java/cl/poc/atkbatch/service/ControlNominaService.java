@@ -10,6 +10,7 @@ import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
@@ -23,7 +24,7 @@ public class ControlNominaService {
         this.repository = repository;
     }
 
-    @Transactional
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public ControlNominaEntity markProcessing(Long jobExecutionId, Long numeroNomina) {
         Optional<ControlNominaEntity> existing = repository.findByIdJobExecutionIdAndIdNumeroNomina(
                 jobExecutionId, numeroNomina);
@@ -44,7 +45,7 @@ public class ControlNominaService {
         return repository.save(entity);
     }
 
-    @Transactional
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public ControlNominaEntity markCompleted(ResultadoNomina resultadoNomina) {
         ControlNominaEntity entity = repository.findByIdJobExecutionIdAndIdNumeroNomina(
                         resultadoNomina.jobExecutionId(), resultadoNomina.numeroNomina())
@@ -66,7 +67,7 @@ public class ControlNominaService {
         return repository.save(entity);
     }
 
-    @Transactional
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public ControlNominaEntity markError(Long jobExecutionId, Long numeroNomina, String errorMessage) {
         ControlNominaEntity entity = repository.findByIdJobExecutionIdAndIdNumeroNomina(jobExecutionId, numeroNomina)
                 .orElseGet(() -> createBaseEntity(jobExecutionId, numeroNomina));

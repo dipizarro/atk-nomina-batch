@@ -3,16 +3,20 @@ package cl.poc.atkbatch.api.controller;
 import cl.poc.atkbatch.api.dto.BatchStatusResponse;
 import cl.poc.atkbatch.api.dto.BatchSummaryResponse;
 import cl.poc.atkbatch.api.dto.NominaResultResponse;
+import cl.poc.atkbatch.api.dto.StartBatchRequest;
 import cl.poc.atkbatch.api.dto.StartBatchResponse;
 import cl.poc.atkbatch.service.BatchLauncherService;
 import cl.poc.atkbatch.service.BatchStatusService;
 import cl.poc.atkbatch.service.BatchSummaryService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
@@ -38,8 +42,8 @@ public class NominaBatchController {
     @Operation(summary = "Inicia asincronicamente el batch de nominas")
     @PostMapping("/start")
     @ResponseStatus(HttpStatus.ACCEPTED)
-    public StartBatchResponse startBatch() {
-        return batchLauncherService.startNominaBatch();
+    public StartBatchResponse startBatch(@Valid @RequestBody(required = false) StartBatchRequest request) {
+        return batchLauncherService.startNominaBatch(request);
     }
 
     @Operation(summary = "Consulta el estado de una ejecucion batch")
@@ -60,5 +64,11 @@ public class NominaBatchController {
             @PathVariable Long jobExecutionId,
             @PathVariable Long numeroNomina) {
         return batchSummaryService.getNominaResult(jobExecutionId, numeroNomina);
+    }
+
+    @ExceptionHandler(IllegalArgumentException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public String handleBadRequest(IllegalArgumentException exception) {
+        return exception.getMessage();
     }
 }

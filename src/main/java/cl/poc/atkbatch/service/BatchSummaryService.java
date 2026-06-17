@@ -36,7 +36,9 @@ public class BatchSummaryService {
                 summary.totalNok(),
                 summary.totalConciliaciones(),
                 summary.totalDistribuciones(),
-                summary.nomfactresGenerated());
+                summary.nomfactresGenerated(),
+                summary.metadata() == null ? null : summary.metadata().profile(),
+                summary.metadata() == null ? null : summary.metadata().dryRun());
     }
 
     public NominaResultResponse getNominaResult(Long jobExecutionId, Long numeroNomina) {
