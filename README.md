@@ -176,6 +176,12 @@ Resumen operativo:
 
 Los endpoints de estado/resumen devuelven errores compactados; el stacktrace completo queda en logs y metadata Spring Batch.
 
+## Architecture and package conventions
+
+La revision estructural esta documentada en `docs/architecture-review.md`.
+
+El namespace base actual `cl.poc.atkbatch` queda pendiente de validacion corporativa antes de una migracion masiva. La decision esta registrada en `docs/decisions/ADR-002-package-namespace.md`.
+
 ## Origen del proyecto
 
 El servicio nacio como una POC para validar integracion SOAP Artikos, procesamiento Spring Batch y persistencia Oracle. A partir de Sprint 8.1 el nombre y la documentacion principal se normalizan como aplicacion de integracion batch, manteniendo compatibilidad con componentes diagnosticos hasta su limpieza posterior.
@@ -188,6 +194,7 @@ El servicio nacio como una POC para validar integracion SOAP Artikos, procesamie
 - Logging: `docs/logging.md`
 - Manejo de errores: `docs/error-handling.md`
 - Secretos y ambientes: `docs/secrets.md`
+- Revision de arquitectura: `docs/architecture-review.md`
 - Deuda tecnica: `docs/technical-debt.md`
 - Decisiones: `docs/decisions`
 
@@ -200,5 +207,5 @@ mvn clean test
 ## Commit sugerido
 
 ```bash
-git commit -m "chore: externalize environment configuration and secrets strategy"
+git commit -m "chore: review architecture and align project structure"
 ```

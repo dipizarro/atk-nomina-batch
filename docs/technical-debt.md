@@ -13,6 +13,8 @@ Pendiente:
 
 - Eliminar definitivamente endpoints diagnosticos si el proyecto no los requiere.
 - Proteger endpoint administrativo de purga metadata con autenticacion y autorizacion.
+- Definir mecanismo de autenticacion/autorizacion para endpoints productivos.
+- Definir si `POST /api/v1/nominas/batch/start` debe exigir siempre body con `profile` o mantener compatibilidad de dry-run sin body.
 
 ## Namespace Java
 
@@ -22,6 +24,8 @@ El paquete base actual `cl.poc.atkbatch` conserva la historia inicial del proyec
 - `cl.zurich.artikos.nomina`
 
 Este cambio afecta imports, paquetes, tests, configuracion de logs y posiblemente reglas de analisis estatico, por lo que se deja fuera de Sprint 8.1 y Sprint 8.2.
+
+Sprint 8.6 agrega `docs/decisions/ADR-002-package-namespace.md` y mantiene este cambio como REQUIERE VALIDACION hasta confirmar el namespace corporativo definitivo.
 
 ## Componentes simulados
 
@@ -57,6 +61,12 @@ Pendiente:
 ## Integracion Procurement
 
 La integracion posterior con Procurement queda pendiente para el final del roadmap. Debe definirse contrato, responsabilidades, estados funcionales, reintentos y manejo de errores antes de conectar el flujo productivo.
+
+## Contrato REST y errores
+
+- Definir estructura corporativa de error REST si existe.
+- Evaluar si `NominaResultResponse.nomfactresXml` debe seguir expuesto en endpoint productivo o moverse a diagnostico/auditoria.
+- Documentar codigos HTTP esperados por endpoint en un documento funcional si el cliente lo exige.
 
 ## Skills y automatizacion
 
