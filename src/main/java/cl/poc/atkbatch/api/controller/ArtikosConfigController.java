@@ -5,6 +5,7 @@ import cl.poc.atkbatch.domain.artikos.ArtikosProfileType;
 import cl.poc.atkbatch.service.artikos.ArtikosMaskedConfigService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -15,8 +16,9 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 
 @RestController
-@RequestMapping("/api/v1/artikos/qa/config")
+@RequestMapping("/api/v1/dev/artikos/config")
 @Tag(name = "Artikos QA Diagnostic", description = "Endpoint temporal de diagnostico de configuracion SOAP QA; no usar en produccion")
+@ConditionalOnProperty(name = "app.diagnostics.enabled", havingValue = "true")
 @Deprecated(since = "8.1", forRemoval = false)
 public class ArtikosConfigController {
 

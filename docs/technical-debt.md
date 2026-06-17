@@ -2,13 +2,16 @@
 
 ## Endpoints diagnosticos
 
-Pendiente para Sprint 8.2:
+Resuelto parcialmente en Sprint 8.2:
 
-- Mover endpoints Artikos de diagnostico bajo `/api/v1/dev/artikos/...` o protegerlos por perfil `local`/`qa`.
-- Mover endpoints `CONTROL_NOMINA` diagnosticos bajo `/api/v1/dev/control-nomina/...` o eliminarlos.
-- Unificar los endpoints duplicados de configuracion Artikos enmascarada:
-  - `/api/v1/artikos/qa/nominas/config/{profile}`
-  - `/api/v1/artikos/qa/config/{profile}`
+- Endpoints Artikos de diagnostico movidos bajo `/api/v1/dev/artikos/...`.
+- Endpoint `CONTROL_NOMINA` de prueba movido bajo `/api/v1/dev/control-nomina/test`.
+- Endpoints diagnosticos protegidos con `app.diagnostics.enabled=true`.
+- Endpoint duplicado de configuracion Artikos unificado en `/api/v1/dev/artikos/config/{profile}`.
+
+Pendiente:
+
+- Eliminar definitivamente endpoints diagnosticos si el proyecto no los requiere.
 - Proteger endpoint administrativo de purga metadata con autenticacion y autorizacion.
 
 ## Namespace Java
@@ -18,7 +21,7 @@ El paquete base actual `cl.poc.atkbatch` conserva la historia inicial del proyec
 - `cl.atk.nomina.batch`
 - `cl.zurich.artikos.nomina`
 
-Este cambio afecta imports, paquetes, tests, configuracion de logs y posiblemente reglas de analisis estatico, por lo que se deja fuera de Sprint 8.1.
+Este cambio afecta imports, paquetes, tests, configuracion de logs y posiblemente reglas de analisis estatico, por lo que se deja fuera de Sprint 8.1 y Sprint 8.2.
 
 ## Componentes simulados
 
@@ -43,7 +46,7 @@ Algunos componentes simulados siguen aportando valor para tests unitarios y esce
 
 ## Integracion Procurement
 
-La integracion posterior con Procurement queda pendiente. Debe definirse contrato, responsabilidades, estados funcionales, reintentos y manejo de errores antes de conectar el flujo productivo.
+La integracion posterior con Procurement queda pendiente para el final del roadmap. Debe definirse contrato, responsabilidades, estados funcionales, reintentos y manejo de errores antes de conectar el flujo productivo.
 
 ## Skills y automatizacion
 

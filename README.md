@@ -47,11 +47,13 @@ $env:ATK_ORACLE_PASSWORD='password'
 - Consultar estado batch: `GET /api/v1/nominas/batch/{jobExecutionId}`
 - Consultar resumen batch: `GET /api/v1/nominas/batch/{jobExecutionId}/summary`
 - Consultar resultado por nomina: `GET /api/v1/nominas/batch/{jobExecutionId}/results/{numeroNomina}`
+- Consultar control por job: `GET /api/v1/control-nomina/jobs/{jobExecutionId}`
+- Consultar control por nomina: `GET /api/v1/control-nomina/jobs/{jobExecutionId}/nominas/{numeroNomina}`
 - Simular o ejecutar purga de metadata Spring Batch: `POST /api/v1/admin/batch-metadata/purge`
 - Actuator health: `GET /actuator/health`
 - Swagger UI: `GET /swagger-ui.html`
 
-Los endpoints temporales de diagnostico Artikos y CONTROL_NOMINA siguen disponibles por compatibilidad, pero estan marcados como no productivos en OpenAPI y documentados en `docs/endpoints.md`.
+Los endpoints temporales de diagnostico Artikos y CONTROL_NOMINA viven bajo `/api/v1/dev/...` y solo se cargan si `app.diagnostics.enabled=true`.
 
 ## Configuracion principal
 
@@ -62,8 +64,33 @@ La configuracion base vive en `src/main/resources/application.properties`. La co
 - `atk.batch.chunk-size=20`
 - `atk.batch.real.chunk-size=1`
 - `atk.batch.sample-file=classpath:samples/ZSVIDA_Nom15960.xml`
+- `app.diagnostics.enabled=false`
 
 En Oracle, Spring Batch no crea su metadata automaticamente. La aplicacion usa `spring.batch.jdbc.initialize-schema=never`, por lo que los scripts SQL deben ejecutarse manualmente antes de disparar el endpoint de inicio.
+
+## Diagnostics mode
+
+El modo diagnostico esta deshabilitado por defecto:
+
+```properties
+app.diagnostics.enabled=false
+```
+
+Para pruebas locales puede habilitarse en `src/main/resources/application-local.properties`:
+
+```properties
+app.diagnostics.enabled=true
+```
+
+Cuando esta activo, la aplicacion expone endpoints bajo `/api/v1/dev/...` para probar operaciones SOAP Artikos y una insercion de prueba en `CONTROL_NOMINA`:
+
+- `POST /api/v1/dev/artikos/nominas/fetch`
+- `POST /api/v1/dev/artikos/nominas/confirm`
+- `POST /api/v1/dev/artikos/nominas/result/test`
+- `GET /api/v1/dev/artikos/config/{profile}`
+- `POST /api/v1/dev/control-nomina/test`
+
+Este modo no debe estar habilitado en produccion. Los endpoints diagnosticos pueden consumir servicios Artikos QA o escribir datos de prueba en Oracle.
 
 ## Oracle
 
@@ -128,5 +155,5 @@ mvn clean test
 ## Commit sugerido
 
 ```bash
-git commit -m "chore: rebrand project from poc to batch integration service"
+git commit -m "chore: isolate diagnostic endpoints behind configuration"
 ```

@@ -1,6 +1,5 @@
 package cl.poc.atkbatch.api.controller;
 
-import cl.poc.atkbatch.api.dto.ArtikosMaskedProfileConfigResponse;
 import cl.poc.atkbatch.api.dto.ConfirmNominaRequest;
 import cl.poc.atkbatch.api.dto.ConfirmNominaResponse;
 import cl.poc.atkbatch.api.dto.FetchNominaRequest;
@@ -14,7 +13,6 @@ import cl.poc.atkbatch.domain.artikos.ArtikosGenericResponse;
 import cl.poc.atkbatch.domain.artikos.ArtikosProfileType;
 import cl.poc.atkbatch.service.NominaResultXmlService;
 import cl.poc.atkbatch.service.artikos.ArtikosGenericSoapResponseParser;
-import cl.poc.atkbatch.service.artikos.ArtikosMaskedConfigService;
 import cl.poc.atkbatch.service.artikos.ArtikosSoapClient;
 import cl.poc.atkbatch.service.artikos.ArtikosSoapClientException;
 import cl.poc.atkbatch.service.artikos.ArtikosSoapResponseParser;
@@ -27,9 +25,8 @@ import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.web.bind.annotation.ExceptionHandler;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -38,8 +35,9 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 
 @RestController
-@RequestMapping("/api/v1/artikos/qa/nominas")
+@RequestMapping("/api/v1/dev/artikos/nominas")
 @Tag(name = "Artikos QA Diagnostic", description = "Endpoints temporales de diagnostico SOAP QA; no usar en produccion")
+@ConditionalOnProperty(name = "app.diagnostics.enabled", havingValue = "true")
 @Deprecated(since = "8.1", forRemoval = false)
 public class ArtikosDiagnosticController {
 
@@ -48,19 +46,16 @@ public class ArtikosDiagnosticController {
     private final ArtikosSoapClient soapClient;
     private final ArtikosSoapResponseParser responseParser;
     private final ArtikosGenericSoapResponseParser genericResponseParser;
-    private final ArtikosMaskedConfigService maskedConfigService;
     private final NominaResultXmlService nominaResultXmlService;
 
     public ArtikosDiagnosticController(
             ArtikosSoapClient soapClient,
             ArtikosSoapResponseParser responseParser,
             ArtikosGenericSoapResponseParser genericResponseParser,
-            ArtikosMaskedConfigService maskedConfigService,
             NominaResultXmlService nominaResultXmlService) {
         this.soapClient = soapClient;
         this.responseParser = responseParser;
         this.genericResponseParser = genericResponseParser;
-        this.maskedConfigService = maskedConfigService;
         this.nominaResultXmlService = nominaResultXmlService;
     }
 
@@ -133,12 +128,6 @@ public class ArtikosDiagnosticController {
                 response.success()
                         ? "Resultado enviado correctamente a Artikos"
                         : response.messageText());
-    }
-
-    @GetMapping("/config/{profile}")
-    @Operation(summary = "[DIAGNOSTIC - not for production] Muestra configuracion Artikos QA enmascarada por perfil")
-    public ArtikosMaskedProfileConfigResponse getMaskedConfig(@PathVariable String profile) {
-        return maskedConfigService.getMaskedConfig(parseProfile(profile));
     }
 
     private ArtikosProfileType parseProfile(String profile) {
