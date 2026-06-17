@@ -2,58 +2,31 @@ package cl.poc.atkbatch.domain.artikos;
 
 public class ArtikosProfileConfig {
 
-    private String token;
-    private String msgFromAddress;
-    private String msgCodFromAddress;
-    private String msgToAddress;
-    private String msgCodSis;
-    private String msgCodExterno;
+    private ArtikosOperationConfig consumoNomina;
+    private ArtikosOperationConfig respuestaNomina;
+    private ArtikosOperationConfig resultadoNomina;
 
-    public String getToken() {
-        return token;
+    public ArtikosOperationConfig getConsumoNomina() {
+        return consumoNomina;
     }
 
-    public void setToken(String token) {
-        this.token = token;
+    public void setConsumoNomina(ArtikosOperationConfig consumoNomina) {
+        this.consumoNomina = consumoNomina;
     }
 
-    public String getMsgFromAddress() {
-        return msgFromAddress;
+    public ArtikosOperationConfig getRespuestaNomina() {
+        return respuestaNomina;
     }
 
-    public void setMsgFromAddress(String msgFromAddress) {
-        this.msgFromAddress = msgFromAddress;
+    public void setRespuestaNomina(ArtikosOperationConfig respuestaNomina) {
+        this.respuestaNomina = respuestaNomina;
     }
 
-    public String getMsgCodFromAddress() {
-        return msgCodFromAddress;
+    public ArtikosOperationConfig getResultadoNomina() {
+        return resultadoNomina;
     }
 
-    public void setMsgCodFromAddress(String msgCodFromAddress) {
-        this.msgCodFromAddress = msgCodFromAddress;
-    }
-
-    public String getMsgToAddress() {
-        return msgToAddress;
-    }
-
-    public void setMsgToAddress(String msgToAddress) {
-        this.msgToAddress = msgToAddress;
-    }
-
-    public String getMsgCodSis() {
-        return msgCodSis;
-    }
-
-    public void setMsgCodSis(String msgCodSis) {
-        this.msgCodSis = msgCodSis;
-    }
-
-    public String getMsgCodExterno() {
-        return msgCodExterno;
-    }
-
-    public void setMsgCodExterno(String msgCodExterno) {
-        this.msgCodExterno = msgCodExterno;
+    public void setResultadoNomina(ArtikosOperationConfig resultadoNomina) {
+        this.resultadoNomina = resultadoNomina;
     }
 }

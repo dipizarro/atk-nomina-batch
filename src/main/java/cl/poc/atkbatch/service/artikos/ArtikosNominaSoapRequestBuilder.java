@@ -1,6 +1,6 @@
 package cl.poc.atkbatch.service.artikos;
 
-import cl.poc.atkbatch.domain.artikos.ArtikosProfileConfig;
+import cl.poc.atkbatch.domain.artikos.ArtikosOperationConfig;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import org.springframework.stereotype.Component;
@@ -12,8 +12,8 @@ public class ArtikosNominaSoapRequestBuilder {
     private static final DateTimeFormatter ARTIKOS_DATE_FORMAT = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss");
     private static final String ARTIKOS_DOC_EXTRACTOR_NAMESPACE = "AtkWs_DocExtractor";
 
-    public String buildNomfacterpRequest(ArtikosProfileConfig profileConfig) {
-        validate(profileConfig);
+    public String buildNomfacterpRequest(ArtikosOperationConfig operationConfig) {
+        validate(operationConfig);
         String messageDateTime = LocalDateTime.now().format(ARTIKOS_DATE_FORMAT);
 
         return """
@@ -22,7 +22,7 @@ public class ArtikosNominaSoapRequestBuilder {
                   <soap:Body>
                     <EjecutaTrx xmlns="%s">
                       <token>%s</token>
-                      <msgCode>NOMFACTERP</msgCode>
+                      <msgCode>%s</msgCode>
                       <msgFromAdress>%s</msgFromAdress>
                       <MsgCodFromAdress>%s</MsgCodFromAdress>
                       <msgToAdress>%s</msgToAdress>
@@ -36,26 +36,27 @@ public class ArtikosNominaSoapRequestBuilder {
                 </soap:Envelope>
                 """.formatted(
                 ARTIKOS_DOC_EXTRACTOR_NAMESPACE,
-                escapeXml(profileConfig.getToken()),
-                escapeXml(profileConfig.getMsgFromAddress()),
-                escapeXml(profileConfig.getMsgCodFromAddress()),
-                escapeXml(profileConfig.getMsgToAddress()),
+                escapeXml(operationConfig.getToken()),
+                escapeXml(operationConfig.getMsgCode()),
+                escapeXml(operationConfig.getMsgFromAddress()),
+                escapeXml(operationConfig.getMsgCodFromAddress()),
+                escapeXml(operationConfig.getMsgToAddress()),
                 escapeXml(messageDateTime),
-                escapeXml(profileConfig.getMsgCodSis()),
-                escapeXml(profileConfig.getMsgCodExterno()));
+                escapeXml(operationConfig.getMsgCodSis()),
+                escapeXml(operationConfig.getMsgCodExterno()));
     }
 
     public String maskToken(String rawXml) {
         return rawXml.replaceAll("(?s)<token>.*?</token>", "<token>****</token>");
     }
 
-    private void validate(ArtikosProfileConfig profileConfig) {
-        requireText(profileConfig.getToken(), "token");
-        requireText(profileConfig.getMsgFromAddress(), "msgFromAddress");
-        requireText(profileConfig.getMsgCodFromAddress(), "msgCodFromAddress");
-        requireText(profileConfig.getMsgToAddress(), "msgToAddress");
-        requireText(profileConfig.getMsgCodSis(), "msgCodSis");
-        requireText(profileConfig.getMsgCodExterno(), "msgCodExterno");
+    private void validate(ArtikosOperationConfig operationConfig) {
+        requireText(operationConfig.getToken(), "token");
+        requireText(operationConfig.getMsgCode(), "msgCode");
+        requireText(operationConfig.getMsgFromAddress(), "msgFromAddress");
+        requireText(operationConfig.getMsgCodFromAddress(), "msgCodFromAddress");
+        requireText(operationConfig.getMsgToAddress(), "msgToAddress");
+        requireText(operationConfig.getMsgCodSis(), "msgCodSis");
     }
 
     private void requireText(String value, String fieldName) {
@@ -65,6 +66,9 @@ public class ArtikosNominaSoapRequestBuilder {
     }
 
     private String escapeXml(String value) {
+        if (value == null) {
+            return "";
+        }
         return value
                 .replace("&", "&amp;")
                 .replace("<", "&lt;")

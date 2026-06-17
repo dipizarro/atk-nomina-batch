@@ -2,7 +2,7 @@ package cl.poc.atkbatch.service.artikos;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import cl.poc.atkbatch.domain.artikos.ArtikosProfileConfig;
+import cl.poc.atkbatch.domain.artikos.ArtikosOperationConfig;
 import org.junit.jupiter.api.Test;
 
 class ArtikosNominaSoapRequestBuilderTest {
@@ -25,14 +25,15 @@ class ArtikosNominaSoapRequestBuilderTest {
         assertThat(builder.maskToken(request)).contains("<token>****</token>");
     }
 
-    private ArtikosProfileConfig profileConfig() {
-        ArtikosProfileConfig profileConfig = new ArtikosProfileConfig();
-        profileConfig.setToken("TOKEN_VIDA");
-        profileConfig.setMsgFromAddress("ZSVIDA");
-        profileConfig.setMsgCodFromAddress("CODVIDA");
-        profileConfig.setMsgToAddress("ARTIKOS");
-        profileConfig.setMsgCodSis("SAF");
-        profileConfig.setMsgCodExterno("EXTVIDA");
-        return profileConfig;
+    private ArtikosOperationConfig profileConfig() {
+        ArtikosOperationConfig operationConfig = new ArtikosOperationConfig();
+        operationConfig.setToken("TOKEN_VIDA");
+        operationConfig.setMsgCode("NOMFACTERP");
+        operationConfig.setMsgFromAddress("ZSVIDA");
+        operationConfig.setMsgCodFromAddress("CODVIDA");
+        operationConfig.setMsgToAddress("ARTIKOS");
+        operationConfig.setMsgCodSis("SAF");
+        operationConfig.setMsgCodExterno("EXTVIDA");
+        return operationConfig;
     }
 }

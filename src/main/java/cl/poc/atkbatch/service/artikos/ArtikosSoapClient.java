@@ -1,7 +1,8 @@
 package cl.poc.atkbatch.service.artikos;
 
 import cl.poc.atkbatch.config.ArtikosProperties;
-import cl.poc.atkbatch.domain.artikos.ArtikosProfileConfig;
+import cl.poc.atkbatch.domain.artikos.ArtikosOperationConfig;
+import cl.poc.atkbatch.domain.artikos.ArtikosOperationType;
 import cl.poc.atkbatch.domain.artikos.ArtikosProfileType;
 import java.io.IOException;
 import java.net.URI;
@@ -41,17 +42,19 @@ public class ArtikosSoapClient {
     }
 
     public String fetchNominaRawXml(ArtikosProfileType profileType) {
-        ArtikosProfileConfig profileConfig = artikosProperties.requireProfile(profileType);
-        String requestXml = requestBuilder.buildNomfacterpRequest(profileConfig);
+        ArtikosOperationConfig operationConfig = artikosProperties.requireOperationConfig(
+                profileType,
+                ArtikosOperationType.CONSUMO_NOMINA);
+        String endpoint = artikosProperties.getEndpoints().getNominaUrl();
+        String requestXml = requestBuilder.buildNomfacterpRequest(operationConfig);
 
         try {
-            LOGGER.info("Calling Artikos QA nomina SOAP endpoint profile={} endpoint={}",
-                    profileType, artikosProperties.getNominaUrl());
+            logOperation(profileType, ArtikosOperationType.CONSUMO_NOMINA, endpoint, operationConfig);
             LOGGER.debug("Artikos NOMFACTERP request profile={} xml={}",
                     profileType, requestBuilder.maskToken(requestXml));
 
             return postSoap(
-                    artikosProperties.getNominaUrl(),
+                    endpoint,
                     requestXml,
                     resolveSoapAction(
                             artikosProperties.getNominaSoapAction(),
@@ -75,20 +78,24 @@ public class ArtikosSoapClient {
             ArtikosProfileType profileType,
             Long numeroNomina,
             Integer estadoRespuesta) {
-        ArtikosProfileConfig profileConfig = artikosProperties.requireProfile(profileType);
+        ArtikosOperationConfig operationConfig = artikosProperties.requireOperationConfig(
+                profileType,
+                ArtikosOperationType.RESPUESTA_NOMINA);
+        String endpoint = artikosProperties.getEndpoints().getConnectorUrl();
         String requestXml = confirmacionRequestBuilder.buildNomfactconfirRequest(
-                profileConfig,
+                operationConfig,
                 numeroNomina,
                 estadoRespuesta);
 
         try {
-            LOGGER.info("Calling Artikos QA confirmation SOAP endpoint profile={} numeroNomina={} endpoint={}",
-                    profileType, numeroNomina, artikosProperties.getConnectorUrl());
+            logOperation(profileType, ArtikosOperationType.RESPUESTA_NOMINA, endpoint, operationConfig);
+            LOGGER.info("Artikos NOMFACTCONFIR request shape profile={} numeroNomina={} {}",
+                    profileType, numeroNomina, confirmacionRequestBuilder.describeContractShape(requestXml));
             LOGGER.debug("Artikos NOMFACTCONFIR request profile={} numeroNomina={} xml={}",
                     profileType, numeroNomina, confirmacionRequestBuilder.maskToken(requestXml));
 
             return postSoap(
-                    artikosProperties.getConnectorUrl(),
+                    endpoint,
                     requestXml,
                     resolveSoapAction(
                             artikosProperties.getConnectorSoapAction(),
@@ -107,6 +114,10 @@ public class ArtikosSoapClient {
             throw new ArtikosSoapClientException("No fue posible confirmar recepcion de nomina en Artikos QA",
                     exception);
         }
+    }
+
+    public ArtikosOperationConfig resultadoNominaConfig(ArtikosProfileType profileType) {
+        return artikosProperties.requireOperationConfig(profileType, ArtikosOperationType.RESULTADO_NOMINA);
     }
 
     private String postSoap(
@@ -139,6 +150,26 @@ public class ArtikosSoapClient {
 
     private void applySoapAction(HttpHeaders headers, String soapAction) {
         headers.add("SOAPAction", soapAction);
+    }
+
+    private void logOperation(
+            ArtikosProfileType profileType,
+            ArtikosOperationType operationType,
+            String endpoint,
+            ArtikosOperationConfig operationConfig) {
+        LOGGER.info("Calling Artikos QA SOAP endpoint profile={} operation={} endpoint={} msgCode={} "
+                        + "msgFromAddress={} msgCodFromAddress={} msgToAddress={} msgCodSis={} "
+                        + "tokenPresent={} tokenMasked={}",
+                profileType,
+                operationType.getPropertyName(),
+                endpoint,
+                operationConfig.getMsgCode(),
+                operationConfig.getMsgFromAddress(),
+                operationConfig.getMsgCodFromAddress(),
+                operationConfig.getMsgToAddress(),
+                operationConfig.getMsgCodSis(),
+                ArtikosTokenMasker.isPresent(operationConfig.getToken()),
+                ArtikosTokenMasker.mask(operationConfig.getToken()));
     }
 
     private String resolveSoapAction(

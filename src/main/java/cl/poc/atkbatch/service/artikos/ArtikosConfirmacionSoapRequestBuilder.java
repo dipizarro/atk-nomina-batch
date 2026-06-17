@@ -1,6 +1,6 @@
 package cl.poc.atkbatch.service.artikos;
 
-import cl.poc.atkbatch.domain.artikos.ArtikosProfileConfig;
+import cl.poc.atkbatch.domain.artikos.ArtikosOperationConfig;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import org.springframework.stereotype.Component;
@@ -13,54 +13,69 @@ public class ArtikosConfirmacionSoapRequestBuilder {
     private static final String ARTIKOS_DOC_CONNECTOR_NAMESPACE = "AtkWs_DocConnectorB2B";
 
     public String buildNomfactconfirRequest(
-            ArtikosProfileConfig profileConfig,
+            ArtikosOperationConfig operationConfig,
             Long numeroNomina,
             Integer estadoRespuesta) {
-        validate(profileConfig, numeroNomina, estadoRespuesta);
+        validate(operationConfig, numeroNomina, estadoRespuesta);
         String messageDateTime = LocalDateTime.now().format(ARTIKOS_DATE_FORMAT);
-        String msgDocument = buildMsgDocument(profileConfig, numeroNomina, estadoRespuesta, messageDateTime);
+        String msgDocument = buildMsgDocument(operationConfig, numeroNomina, estadoRespuesta, messageDateTime);
 
         return """
                 <?xml version="1.0" encoding="utf-8"?>
-                <soap:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
-                  <soap:Body>
-                    <EjecutaTrx xmlns="%s">
-                      <token>%s</token>
-                      <msgCode>NOMFACTCONFIR</msgCode>
-                      <msgFromAdress>%s</msgFromAdress>
-                      <MsgCodFromAdress>%s</MsgCodFromAdress>
-                      <msgToAdress>%s</msgToAdress>
-                      <msgDateTime>%s</msgDateTime>
-                      <msgCodSis>%s</msgCodSis>
-                      <msgCallBack></msgCallBack>
-                      <msgDocument>%s</msgDocument>
-                    </EjecutaTrx>
-                  </soap:Body>
-                </soap:Envelope>
+                <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:atk="%s">
+                  <soapenv:Header/>
+                  <soapenv:Body>
+                    <atk:EjecutaTrx>
+                      <atk:Token>%s</atk:Token>
+                      <atk:MSgCode>%s</atk:MSgCode>
+                      <atk:MsgFromAddres>%s</atk:MsgFromAddres>
+                      <atk:MsgCodFromAddres>%s</atk:MsgCodFromAddres>
+                      <atk:MsgToAddres>%s</atk:MsgToAddres>
+                      <atk:MsgDateTime>%s</atk:MsgDateTime>
+                      <atk:MsgCodSis>%s</atk:MsgCodSis>
+                      <atk:MsgCallBack></atk:MsgCallBack>
+                      <atk:MsgXmlDocument>%s</atk:MsgXmlDocument>
+                      <atk:MsgNumber></atk:MsgNumber>
+                    </atk:EjecutaTrx>
+                  </soapenv:Body>
+                </soapenv:Envelope>
                 """.formatted(
                 ARTIKOS_DOC_CONNECTOR_NAMESPACE,
-                escapeXml(profileConfig.getToken()),
-                escapeXml(profileConfig.getMsgFromAddress()),
-                escapeXml(profileConfig.getMsgCodFromAddress()),
-                escapeXml(profileConfig.getMsgToAddress()),
+                escapeXml(operationConfig.getToken()),
+                escapeXml(operationConfig.getMsgCode()),
+                escapeXml(operationConfig.getMsgFromAddress()),
+                escapeXml(operationConfig.getMsgCodFromAddress()),
+                escapeXml(operationConfig.getMsgToAddress()),
                 escapeXml(messageDateTime),
-                escapeXml(profileConfig.getMsgCodSis()),
+                escapeXml(operationConfig.getMsgCodSis()),
                 escapeXml(msgDocument));
     }
 
     public String maskToken(String rawXml) {
-        return rawXml.replaceAll("(?s)<token>.*?</token>", "<token>****</token>");
+        return rawXml
+                .replaceAll("(?s)<token>.*?</token>", "<token>****</token>")
+                .replaceAll("(?s)<atk:Token>.*?</atk:Token>", "<atk:Token>****</atk:Token>")
+                .replaceAll("(?s)<Token>.*?</Token>", "<Token>****</Token>");
+    }
+
+    public String describeContractShape(String rawXml) {
+        return "connectorContractShape="
+                + "hasAtkToken:" + rawXml.contains("<atk:Token>")
+                + ",hasAtkMsgXmlDocument:" + rawXml.contains("<atk:MsgXmlDocument>")
+                + ",hasLegacyToken:" + rawXml.contains("<token>")
+                + ",hasLegacyMsgDocument:" + rawXml.contains("<msgDocument>")
+                + ",namespace:" + ARTIKOS_DOC_CONNECTOR_NAMESPACE;
     }
 
     private String buildMsgDocument(
-            ArtikosProfileConfig profileConfig,
+            ArtikosOperationConfig operationConfig,
             Long numeroNomina,
             Integer estadoRespuesta,
             String messageDateTime) {
         return """
                 <Message>
                   <MessageId>
-                    <MsgCode>NOMFACTCONFIR</MsgCode>
+                    <MsgCode>%s</MsgCode>
                     <MsgDesc>Confirmacion de recibo de nomina</MsgDesc>
                     <MsgVersion>V2.0</MsgVersion>
                     <MsgFromAddress>%s</MsgFromAddress>
@@ -76,20 +91,22 @@ public class ArtikosConfirmacionSoapRequestBuilder {
                   </Respuesta>
                 </Message>
                 """.formatted(
-                profileConfig.getMsgFromAddress(),
-                profileConfig.getMsgToAddress(),
+                operationConfig.getMsgCode(),
+                operationConfig.getMsgFromAddress(),
+                operationConfig.getMsgToAddress(),
                 messageDateTime,
-                profileConfig.getMsgCodSis(),
+                operationConfig.getMsgCodSis(),
                 numeroNomina,
                 estadoRespuesta);
     }
 
-    private void validate(ArtikosProfileConfig profileConfig, Long numeroNomina, Integer estadoRespuesta) {
-        requireText(profileConfig.getToken(), "token");
-        requireText(profileConfig.getMsgFromAddress(), "msgFromAddress");
-        requireText(profileConfig.getMsgCodFromAddress(), "msgCodFromAddress");
-        requireText(profileConfig.getMsgToAddress(), "msgToAddress");
-        requireText(profileConfig.getMsgCodSis(), "msgCodSis");
+    private void validate(ArtikosOperationConfig operationConfig, Long numeroNomina, Integer estadoRespuesta) {
+        requireText(operationConfig.getToken(), "token");
+        requireText(operationConfig.getMsgCode(), "msgCode");
+        requireText(operationConfig.getMsgFromAddress(), "msgFromAddress");
+        requireText(operationConfig.getMsgCodFromAddress(), "msgCodFromAddress");
+        requireText(operationConfig.getMsgToAddress(), "msgToAddress");
+        requireText(operationConfig.getMsgCodSis(), "msgCodSis");
         if (numeroNomina == null) {
             throw new IllegalArgumentException("numeroNomina es obligatorio");
         }
@@ -105,6 +122,9 @@ public class ArtikosConfirmacionSoapRequestBuilder {
     }
 
     private String escapeXml(String value) {
+        if (value == null) {
+            return "";
+        }
         return value
                 .replace("&", "&amp;")
                 .replace("<", "&lt;")

@@ -1,5 +1,6 @@
 package cl.poc.atkbatch.api.controller;
 
+import cl.poc.atkbatch.api.dto.ArtikosMaskedProfileConfigResponse;
 import cl.poc.atkbatch.api.dto.ConfirmNominaRequest;
 import cl.poc.atkbatch.api.dto.ConfirmNominaResponse;
 import cl.poc.atkbatch.api.dto.FetchNominaRequest;
@@ -8,6 +9,7 @@ import cl.poc.atkbatch.domain.Nomina;
 import cl.poc.atkbatch.domain.artikos.ArtikosGenericResponse;
 import cl.poc.atkbatch.domain.artikos.ArtikosProfileType;
 import cl.poc.atkbatch.service.artikos.ArtikosGenericSoapResponseParser;
+import cl.poc.atkbatch.service.artikos.ArtikosMaskedConfigService;
 import cl.poc.atkbatch.service.artikos.ArtikosSoapClient;
 import cl.poc.atkbatch.service.artikos.ArtikosSoapClientException;
 import cl.poc.atkbatch.service.artikos.ArtikosSoapResponseParser;
@@ -20,6 +22,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -37,14 +41,17 @@ public class ArtikosDiagnosticController {
     private final ArtikosSoapClient soapClient;
     private final ArtikosSoapResponseParser responseParser;
     private final ArtikosGenericSoapResponseParser genericResponseParser;
+    private final ArtikosMaskedConfigService maskedConfigService;
 
     public ArtikosDiagnosticController(
             ArtikosSoapClient soapClient,
             ArtikosSoapResponseParser responseParser,
-            ArtikosGenericSoapResponseParser genericResponseParser) {
+            ArtikosGenericSoapResponseParser genericResponseParser,
+            ArtikosMaskedConfigService maskedConfigService) {
         this.soapClient = soapClient;
         this.responseParser = responseParser;
         this.genericResponseParser = genericResponseParser;
+        this.maskedConfigService = maskedConfigService;
     }
 
     @PostMapping("/fetch")
@@ -98,6 +105,12 @@ public class ArtikosDiagnosticController {
                 response.success()
                         ? "Confirmacion enviada correctamente a Artikos"
                         : response.messageText());
+    }
+
+    @GetMapping("/config/{profile}")
+    @Operation(summary = "Muestra configuracion Artikos QA enmascarada por perfil")
+    public ArtikosMaskedProfileConfigResponse getMaskedConfig(@PathVariable String profile) {
+        return maskedConfigService.getMaskedConfig(parseProfile(profile));
     }
 
     private ArtikosProfileType parseProfile(String profile) {

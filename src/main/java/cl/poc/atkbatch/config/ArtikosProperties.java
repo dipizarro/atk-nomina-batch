@@ -1,6 +1,8 @@
 package cl.poc.atkbatch.config;
 
 import cl.poc.atkbatch.domain.artikos.ArtikosProfileConfig;
+import cl.poc.atkbatch.domain.artikos.ArtikosOperationConfig;
+import cl.poc.atkbatch.domain.artikos.ArtikosOperationType;
 import cl.poc.atkbatch.domain.artikos.ArtikosProfileType;
 import java.util.EnumMap;
 import java.util.Map;
@@ -9,27 +11,18 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 @ConfigurationProperties(prefix = "artikos.qa")
 public class ArtikosProperties {
 
-    private String nominaUrl;
-    private String connectorUrl;
+    private Endpoints endpoints = new Endpoints();
     private String soapAction = "";
     private String nominaSoapAction = "";
     private String connectorSoapAction = "";
     private Map<ArtikosProfileType, ArtikosProfileConfig> profiles = new EnumMap<>(ArtikosProfileType.class);
 
-    public String getNominaUrl() {
-        return nominaUrl;
+    public Endpoints getEndpoints() {
+        return endpoints;
     }
 
-    public void setNominaUrl(String nominaUrl) {
-        this.nominaUrl = nominaUrl;
-    }
-
-    public String getConnectorUrl() {
-        return connectorUrl;
-    }
-
-    public void setConnectorUrl(String connectorUrl) {
-        this.connectorUrl = connectorUrl;
+    public void setEndpoints(Endpoints endpoints) {
+        this.endpoints = endpoints == null ? new Endpoints() : endpoints;
     }
 
     public String getSoapAction() {
@@ -70,5 +63,43 @@ public class ArtikosProperties {
             throw new IllegalStateException("No existe configuracion Artikos QA para el perfil " + profileType);
         }
         return profileConfig;
+    }
+
+    public ArtikosOperationConfig requireOperationConfig(
+            ArtikosProfileType profileType,
+            ArtikosOperationType operationType) {
+        ArtikosProfileConfig profileConfig = requireProfile(profileType);
+        ArtikosOperationConfig operationConfig = switch (operationType) {
+            case CONSUMO_NOMINA -> profileConfig.getConsumoNomina();
+            case RESPUESTA_NOMINA -> profileConfig.getRespuestaNomina();
+            case RESULTADO_NOMINA -> profileConfig.getResultadoNomina();
+        };
+        if (operationConfig == null) {
+            throw new IllegalStateException("No existe configuracion Artikos QA para el perfil "
+                    + profileType + " y operacion " + operationType.getPropertyName());
+        }
+        return operationConfig;
+    }
+
+    public static class Endpoints {
+
+        private String nominaUrl;
+        private String connectorUrl;
+
+        public String getNominaUrl() {
+            return nominaUrl;
+        }
+
+        public void setNominaUrl(String nominaUrl) {
+            this.nominaUrl = nominaUrl;
+        }
+
+        public String getConnectorUrl() {
+            return connectorUrl;
+        }
+
+        public void setConnectorUrl(String connectorUrl) {
+            this.connectorUrl = connectorUrl;
+        }
     }
 }
