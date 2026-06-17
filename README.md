@@ -134,6 +134,19 @@ Reglas principales:
 
 Ejecutar con `dryRun=false` elimina registros reales de `BATCH_*`; en produccion este endpoint debe protegerse con autenticacion y autorizacion.
 
+## Operational logging
+
+Los logs incluyen contexto MDC para trazabilidad operacional:
+
+- `jobExecutionId`
+- `profile`
+- `numeroNomina`
+- `operation`
+
+Las operaciones SOAP se registran como `NOMFACTERP`, `NOMFACTCONFIR` y `NOMFACTRES`, con tiempos de ejecucion y status HTTP cuando aplica. Los tokens nunca deben imprimirse completos; se registran solo como presencia y valor enmascarado. El XML SOAP completo solo puede aparecer en `DEBUG` y con token enmascarado.
+
+La convencion completa esta en `docs/logging.md`.
+
 ## Origen del proyecto
 
 El servicio nacio como una POC para validar integracion SOAP Artikos, procesamiento Spring Batch y persistencia Oracle. A partir de Sprint 8.1 el nombre y la documentacion principal se normalizan como aplicacion de integracion batch, manteniendo compatibilidad con componentes diagnosticos hasta su limpieza posterior.
@@ -143,6 +156,7 @@ El servicio nacio como una POC para validar integracion SOAP Artikos, procesamie
 - Arquitectura: `docs/architecture.md`
 - Flujo batch: `docs/batch-flow.md`
 - Endpoints: `docs/endpoints.md`
+- Logging: `docs/logging.md`
 - Deuda tecnica: `docs/technical-debt.md`
 - Decisiones: `docs/decisions`
 

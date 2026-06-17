@@ -1,6 +1,7 @@
 package cl.poc.atkbatch.batch.processor;
 
 import cl.poc.atkbatch.domain.ResultadoNomina;
+import cl.poc.atkbatch.domain.artikos.ArtikosOperation;
 import cl.poc.atkbatch.domain.artikos.ArtikosFetchedNomina;
 import cl.poc.atkbatch.domain.artikos.ArtikosGenericResponse;
 import cl.poc.atkbatch.service.ControlNominaService;
@@ -8,6 +9,7 @@ import cl.poc.atkbatch.service.NominaProcessingService;
 import cl.poc.atkbatch.service.artikos.ArtikosGenericSoapResponseParser;
 import cl.poc.atkbatch.service.artikos.ArtikosSoapClient;
 import cl.poc.atkbatch.shared.exception.ArtikosIntegrationException;
+import cl.poc.atkbatch.shared.logging.LoggingContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.batch.item.ItemProcessor;
@@ -41,10 +43,17 @@ public class ArtikosNominaItemProcessor implements ItemProcessor<ArtikosFetchedN
     @Override
     public ResultadoNomina process(ArtikosFetchedNomina item) {
         Long numeroNomina = item.numeroNomina();
+        LoggingContext.putJobExecutionId(jobExecutionId);
+        LoggingContext.putProfile(item.profile().name());
+        LoggingContext.putNumeroNomina(numeroNomina);
         if (dryRun) {
-            LOGGER.info("Dry-run processing Artikos nomina jobExecutionId={} profile={} numeroNomina={}",
-                    jobExecutionId, item.profile(), numeroNomina);
-            return processLocally(item);
+            try {
+                LOGGER.info("Dry-run processing Artikos nomina jobExecutionId={} profile={} numeroNomina={}",
+                        jobExecutionId, item.profile(), numeroNomina);
+                return processLocally(item);
+            } finally {
+                LoggingContext.clearAll();
+            }
         }
 
         try {
@@ -52,6 +61,7 @@ public class ArtikosNominaItemProcessor implements ItemProcessor<ArtikosFetchedN
                     jobExecutionId, numeroNomina, item.profile());
             controlNominaService.markProcessing(jobExecutionId, numeroNomina);
 
+            LoggingContext.putOperation(ArtikosOperation.NOMFACTCONFIR.name());
             LOGGER.info("Sending Artikos confirmation profile={} numeroNomina={}", item.profile(), numeroNomina);
             String confirmationRawXml = soapClient.confirmNominaRawXml(item.profile(), numeroNomina, 0);
             ArtikosGenericResponse confirmationResponse = genericResponseParser.parseGenericResponse(confirmationRawXml);
@@ -72,6 +82,7 @@ public class ArtikosNominaItemProcessor implements ItemProcessor<ArtikosFetchedN
                 throw new ArtikosIntegrationException(message);
             }
             LOGGER.info("Artikos confirmation OK profile={} numeroNomina={}", item.profile(), numeroNomina);
+            LoggingContext.clearOperation();
 
             return processLocally(item);
         } catch (ArtikosIntegrationException exception) {
@@ -79,6 +90,8 @@ public class ArtikosNominaItemProcessor implements ItemProcessor<ArtikosFetchedN
         } catch (RuntimeException exception) {
             controlNominaService.markError(jobExecutionId, numeroNomina, exception.getMessage());
             throw new ArtikosIntegrationException("Fallo la confirmacion de nomina Artikos", exception);
+        } finally {
+            LoggingContext.clearAll();
         }
     }
 
@@ -89,6 +102,8 @@ public class ArtikosNominaItemProcessor implements ItemProcessor<ArtikosFetchedN
     }
 
     private ResultadoNomina processLocally(ArtikosFetchedNomina item) {
+        LoggingContext.clearOperation();
+        LOGGER.info("Generating NOMFACTRES locally profile={} numeroNomina={}", item.profile(), item.numeroNomina());
         ResultadoNomina result = nominaProcessingService.process(
                 jobExecutionId,
                 item.numeroNomina(),

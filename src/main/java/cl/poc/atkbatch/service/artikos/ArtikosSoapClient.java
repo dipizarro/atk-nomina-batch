@@ -2,10 +2,12 @@ package cl.poc.atkbatch.service.artikos;
 
 import cl.poc.atkbatch.config.ArtikosProperties;
 import cl.poc.atkbatch.domain.ResultadoNomina;
+import cl.poc.atkbatch.domain.artikos.ArtikosOperation;
 import cl.poc.atkbatch.domain.artikos.ArtikosOperationConfig;
 import cl.poc.atkbatch.domain.artikos.ArtikosOperationType;
 import cl.poc.atkbatch.domain.artikos.ArtikosProfileType;
 import cl.poc.atkbatch.service.NominaResultXmlService;
+import cl.poc.atkbatch.shared.logging.LoggingContext;
 import java.io.IOException;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
@@ -56,8 +58,11 @@ public class ArtikosSoapClient {
         String endpoint = artikosProperties.getEndpoints().getNominaUrl();
         String requestXml = requestBuilder.buildNomfacterpRequest(operationConfig);
 
+        long startedAt = System.nanoTime();
+        LoggingContext.putProfile(profileType.name());
+        LoggingContext.putOperation(ArtikosOperation.NOMFACTERP.name());
         try {
-            logOperation(profileType, ArtikosOperationType.CONSUMO_NOMINA, endpoint, operationConfig);
+            logOperation(profileType, ArtikosOperation.NOMFACTERP, endpoint, operationConfig);
             LOGGER.debug("Artikos NOMFACTERP request profile={} xml={}",
                     profileType, requestBuilder.maskToken(requestXml));
 
@@ -76,9 +81,18 @@ public class ArtikosSoapClient {
         } catch (ArtikosSoapClientException exception) {
             throw exception;
         } catch (RestClientException exception) {
-            LOGGER.warn("Artikos QA nomina SOAP connection error profile={} cause={}",
-                    profileType, exception.getMessage(), exception);
+            LOGGER.warn("Artikos SOAP technical error operation={} profile={} endpoint={} elapsedMs={} "
+                            + "exceptionClass={} exceptionMessage={}",
+                    ArtikosOperation.NOMFACTERP,
+                    profileType,
+                    endpoint,
+                    elapsedMs(startedAt),
+                    exception.getClass().getSimpleName(),
+                    exception.getMessage(),
+                    exception);
             throw new ArtikosSoapClientException("No fue posible consultar nominas en Artikos QA", exception);
+        } finally {
+            LoggingContext.clearOperation();
         }
     }
 
@@ -95,8 +109,12 @@ public class ArtikosSoapClient {
                 numeroNomina,
                 estadoRespuesta);
 
+        long startedAt = System.nanoTime();
+        LoggingContext.putProfile(profileType.name());
+        LoggingContext.putNumeroNomina(numeroNomina);
+        LoggingContext.putOperation(ArtikosOperation.NOMFACTCONFIR.name());
         try {
-            logOperation(profileType, ArtikosOperationType.RESPUESTA_NOMINA, endpoint, operationConfig);
+            logOperation(profileType, ArtikosOperation.NOMFACTCONFIR, endpoint, operationConfig);
             LOGGER.info("Artikos NOMFACTCONFIR request shape profile={} numeroNomina={} {}",
                     profileType, numeroNomina, confirmacionRequestBuilder.describeContractShape(requestXml));
             LOGGER.debug("Artikos NOMFACTCONFIR request profile={} numeroNomina={} xml={}",
@@ -117,10 +135,19 @@ public class ArtikosSoapClient {
         } catch (ArtikosSoapClientException exception) {
             throw exception;
         } catch (RestClientException exception) {
-            LOGGER.warn("Artikos QA confirmation SOAP connection error profile={} numeroNomina={} cause={}",
-                    profileType, numeroNomina, exception.getMessage(), exception);
+            LOGGER.warn("Artikos SOAP technical error operation={} profile={} endpoint={} elapsedMs={} "
+                            + "exceptionClass={} exceptionMessage={}",
+                    ArtikosOperation.NOMFACTCONFIR,
+                    profileType,
+                    endpoint,
+                    elapsedMs(startedAt),
+                    exception.getClass().getSimpleName(),
+                    exception.getMessage(),
+                    exception);
             throw new ArtikosSoapClientException("No fue posible confirmar recepcion de nomina en Artikos QA",
                     exception);
+        } finally {
+            LoggingContext.clearOperation();
         }
     }
 
@@ -138,8 +165,12 @@ public class ArtikosSoapClient {
                 : nominaResultXmlService.buildNomfactresXml(resultadoNomina, operationConfig);
         String requestXml = resultadoRequestBuilder.buildNomfactresRequest(operationConfig, nomfactresXml);
 
+        long startedAt = System.nanoTime();
+        LoggingContext.putProfile(profileType.name());
+        LoggingContext.putNumeroNomina(resultadoNomina.numeroNomina());
+        LoggingContext.putOperation(ArtikosOperation.NOMFACTRES.name());
         try {
-            logOperation(profileType, ArtikosOperationType.RESULTADO_NOMINA, endpoint, operationConfig);
+            logOperation(profileType, ArtikosOperation.NOMFACTRES, endpoint, operationConfig);
             LOGGER.info("Artikos NOMFACTRES request shape profile={} numeroNomina={} {}",
                     profileType, resultadoNomina.numeroNomina(), resultadoRequestBuilder.describeContractShape(requestXml));
             LOGGER.debug("Artikos NOMFACTRES request profile={} numeroNomina={} xml={}",
@@ -160,10 +191,19 @@ public class ArtikosSoapClient {
         } catch (ArtikosSoapClientException exception) {
             throw exception;
         } catch (RestClientException exception) {
-            LOGGER.warn("Artikos QA result SOAP connection error profile={} numeroNomina={} cause={}",
-                    profileType, resultadoNomina.numeroNomina(), exception.getMessage(), exception);
+            LOGGER.warn("Artikos SOAP technical error operation={} profile={} endpoint={} elapsedMs={} "
+                            + "exceptionClass={} exceptionMessage={}",
+                    ArtikosOperation.NOMFACTRES,
+                    profileType,
+                    endpoint,
+                    elapsedMs(startedAt),
+                    exception.getClass().getSimpleName(),
+                    exception.getMessage(),
+                    exception);
             throw new ArtikosSoapClientException("No fue posible enviar resultado de nomina en Artikos QA",
                     exception);
+        } finally {
+            LoggingContext.clearOperation();
         }
     }
 
@@ -174,6 +214,7 @@ public class ArtikosSoapClient {
             String operation,
             ArtikosProfileType profileType,
             Long numeroNomina) {
+        long startedAt = System.nanoTime();
         return restClient.post()
                 .uri(URI.create(endpoint))
                 .contentType(MediaType.parseMediaType("text/xml; charset=utf-8"))
@@ -182,12 +223,13 @@ public class ArtikosSoapClient {
                 .exchange((request, response) -> {
                     HttpStatusCode statusCode = response.getStatusCode();
                     String responseBody = readBody(response.getBody());
-                    LOGGER.info("Artikos QA {} SOAP response profile={} numeroNomina={} status={}",
-                            operation, profileType, numeroNomina, statusCode);
+                    LOGGER.info("Artikos QA {} SOAP response profile={} numeroNomina={} httpStatus={} elapsedMs={}",
+                            operation, profileType, numeroNomina, statusCode, elapsedMs(startedAt));
                     if (statusCode.isError()) {
                         String safeBody = compact(responseBody);
-                        LOGGER.warn("Artikos QA {} SOAP error profile={} numeroNomina={} status={} body={}",
-                                operation, profileType, numeroNomina, statusCode, safeBody);
+                        LOGGER.warn("Artikos QA {} SOAP HTTP error profile={} numeroNomina={} httpStatus={} "
+                                        + "elapsedMs={} body={}",
+                                operation, profileType, numeroNomina, statusCode, elapsedMs(startedAt), safeBody);
                         throw new ArtikosSoapClientException(
                                 "Artikos QA respondio HTTP " + statusCode.value() + ": " + safeBody);
                     }
@@ -201,14 +243,14 @@ public class ArtikosSoapClient {
 
     private void logOperation(
             ArtikosProfileType profileType,
-            ArtikosOperationType operationType,
+            ArtikosOperation operation,
             String endpoint,
             ArtikosOperationConfig operationConfig) {
         LOGGER.info("Calling Artikos QA SOAP endpoint profile={} operation={} endpoint={} msgCode={} "
                         + "msgFromAddress={} msgCodFromAddress={} msgToAddress={} msgCodSis={} "
                         + "tokenPresent={} tokenMasked={}",
                 profileType,
-                operationType.getPropertyName(),
+                operation,
                 endpoint,
                 operationConfig.getMsgCode(),
                 operationConfig.getMsgFromAddress(),
@@ -217,6 +259,10 @@ public class ArtikosSoapClient {
                 operationConfig.getMsgCodSis(),
                 ArtikosTokenMasker.isPresent(operationConfig.getToken()),
                 ArtikosTokenMasker.mask(operationConfig.getToken()));
+    }
+
+    private long elapsedMs(long startedAt) {
+        return (System.nanoTime() - startedAt) / 1_000_000;
     }
 
     private String resolveSoapAction(

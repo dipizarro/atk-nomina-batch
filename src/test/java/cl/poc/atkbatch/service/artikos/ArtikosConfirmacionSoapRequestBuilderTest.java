@@ -37,7 +37,9 @@ class ArtikosConfirmacionSoapRequestBuilderTest {
         assertThat(request).doesNotContain("<atk:MsgToAddress>");
         assertThat(request).doesNotContain("<atk:MsgCallback>");
         assertThat(request).doesNotContain("http://tempuri.org/");
-        assertThat(builder.maskToken(request)).contains("<atk:Token>****</atk:Token>");
+        String masked = builder.maskToken(request);
+        assertThat(masked).contains("<atk:Token>****</atk:Token>");
+        assertThat(masked).doesNotContain("TOKEN_GENERALES");
         assertThat(builder.describeContractShape(request))
                 .isEqualTo("connectorContractShape=hasAtkToken:true,hasAtkMsgXmlDocument:true,"
                         + "hasLegacyToken:false,hasLegacyMsgDocument:false,namespace:AtkWs_DocConnectorB2B");

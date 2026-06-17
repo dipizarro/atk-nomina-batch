@@ -1,11 +1,13 @@
 package cl.poc.atkbatch.batch.reader;
 
 import cl.poc.atkbatch.domain.Nomina;
+import cl.poc.atkbatch.domain.artikos.ArtikosOperation;
 import cl.poc.atkbatch.domain.artikos.ArtikosFetchedNomina;
 import cl.poc.atkbatch.domain.artikos.ArtikosProfileType;
 import cl.poc.atkbatch.service.artikos.ArtikosSoapClient;
 import cl.poc.atkbatch.service.artikos.ArtikosSoapResponseParser;
 import cl.poc.atkbatch.shared.exception.ArtikosIntegrationException;
+import cl.poc.atkbatch.shared.logging.LoggingContext;
 import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -37,8 +39,12 @@ public class ArtikosNominaItemReader implements ItemReader<ArtikosFetchedNomina>
 
     @Override
     public ArtikosFetchedNomina read() {
+        LoggingContext.putProfile(profile.name());
+        LoggingContext.putOperation(ArtikosOperation.NOMFACTERP.name());
         if (fetchedCount >= maxNominas) {
             LOGGER.info("Artikos reader reached maxNominas={} profile={} dryRun={}", maxNominas, profile, dryRun);
+            LoggingContext.clearOperation();
+            LoggingContext.clearNomina();
             return null;
         }
 
@@ -60,6 +66,7 @@ public class ArtikosNominaItemReader implements ItemReader<ArtikosFetchedNomina>
 
             Nomina nomina = parsedNomina.get();
             fetchedCount++;
+            LoggingContext.putNumeroNomina(nomina.cabecera().numeroNomina());
             LOGGER.info("Artikos nomina received profile={} numeroNomina={} tipoNomina={} cantidadDocumentos={}",
                     profile,
                     nomina.cabecera().numeroNomina(),
@@ -75,6 +82,9 @@ public class ArtikosNominaItemReader implements ItemReader<ArtikosFetchedNomina>
                     dryRun);
         } catch (RuntimeException exception) {
             throw new ArtikosIntegrationException("No fue posible consultar nomina en Artikos QA", exception);
+        } finally {
+            LoggingContext.clearOperation();
+            LoggingContext.clearNomina();
         }
     }
 }

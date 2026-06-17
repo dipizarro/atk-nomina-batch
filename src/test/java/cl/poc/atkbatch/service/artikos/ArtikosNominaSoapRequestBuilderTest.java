@@ -22,7 +22,9 @@ class ArtikosNominaSoapRequestBuilderTest {
         assertThat(request).contains("<msgCodSis>SAF</msgCodSis>");
         assertThat(request).contains("<msgCodExterno>EXTVIDA</msgCodExterno>");
         assertThat(request).doesNotContain("<token></token>");
-        assertThat(builder.maskToken(request)).contains("<token>****</token>");
+        String masked = builder.maskToken(request);
+        assertThat(masked).contains("<token>****</token>");
+        assertThat(masked).doesNotContain("TOKEN_VIDA");
     }
 
     private ArtikosOperationConfig profileConfig() {
