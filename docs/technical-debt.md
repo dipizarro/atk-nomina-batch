@@ -18,14 +18,11 @@ Pendiente:
 
 ## Namespace Java
 
-El paquete base actual `cl.poc.atkbatch` conserva la historia inicial del proyecto. Debe migrarse a un namespace productivo, por ejemplo:
+Resuelto en Sprint 8.6.1:
 
-- `cl.atk.nomina.batch`
-- `cl.zurich.artikos.nomina`
-
-Este cambio afecta imports, paquetes, tests, configuracion de logs y posiblemente reglas de analisis estatico, por lo que se deja fuera de Sprint 8.1 y Sprint 8.2.
-
-Sprint 8.6 agrega `docs/decisions/ADR-002-package-namespace.md` y mantiene este cambio como REQUIERE VALIDACION hasta confirmar el namespace corporativo definitivo.
+- El paquete base fue migrado desde `cl.poc.atkbatch` hacia `cl.atk.nomina.batch`.
+- `docs/decisions/ADR-002-package-namespace.md` queda en estado Accepted.
+- Nuevas clases deben mantenerse bajo `cl.atk.nomina.batch`.
 
 ## Componentes simulados
 

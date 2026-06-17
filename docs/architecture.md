@@ -24,7 +24,7 @@ El sistema opera como puente entre Artikos QA y el procesamiento interno de nomi
 
 ## Paquete base
 
-El paquete Java actual sigue siendo `cl.poc.atkbatch` por compatibilidad y para evitar una refactorizacion masiva en este sprint. El cambio de paquete a un namespace productivo queda registrado en `docs/technical-debt.md`.
+El paquete Java base es `cl.atk.nomina.batch`. La migracion desde el namespace historico quedo registrada en `docs/decisions/ADR-002-package-namespace.md`.
 
 ## Disparador REST
 

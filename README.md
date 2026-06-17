@@ -180,7 +180,7 @@ Los endpoints de estado/resumen devuelven errores compactados; el stacktrace com
 
 La revision estructural esta documentada en `docs/architecture-review.md`.
 
-El namespace base actual `cl.poc.atkbatch` queda pendiente de validacion corporativa antes de una migracion masiva. La decision esta registrada en `docs/decisions/ADR-002-package-namespace.md`.
+El namespace base actual es `cl.atk.nomina.batch`. La decision esta registrada en `docs/decisions/ADR-002-package-namespace.md`.
 
 ## Origen del proyecto
 

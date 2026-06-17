@@ -18,24 +18,24 @@ No se detectaron skills faltantes entre las solicitadas para el sprint.
 
 | Package | Responsabilidad |
 | --- | --- |
-| `cl.poc.atkbatch` | Clase principal Spring Boot. |
-| `cl.poc.atkbatch.api.controller` | Endpoints REST productivos y diagnosticos. |
-| `cl.poc.atkbatch.api.dto` | Requests/responses REST. |
-| `cl.poc.atkbatch.api.mapper` | Mapeo de entidades internas a DTOs. |
-| `cl.poc.atkbatch.batch.config` | Configuracion Spring Batch y datasource local Oracle. |
-| `cl.poc.atkbatch.batch.reader` | Lectura de nominas desde Artikos o fixtures simulados. |
-| `cl.poc.atkbatch.batch.processor` | Procesamiento de nominas/documentos en steps batch. |
-| `cl.poc.atkbatch.batch.writer` | Escritura de resultados y envio `NOMFACTRES`. |
-| `cl.poc.atkbatch.config` | Propiedades y validadores de configuracion. |
-| `cl.poc.atkbatch.domain` | Modelo de dominio interno y entidad `CONTROL_NOMINA`. |
-| `cl.poc.atkbatch.domain.artikos` | Modelos/configuracion especificos de Artikos. |
-| `cl.poc.atkbatch.domain.error` | Tipos de error de integracion. |
-| `cl.poc.atkbatch.repository` | Repositorios JPA. |
-| `cl.poc.atkbatch.service` | Servicios de negocio, control, parser, store y purga. |
-| `cl.poc.atkbatch.service.artikos` | Cliente SOAP, builders, parsers y masking Artikos. |
-| `cl.poc.atkbatch.shared.exception` | Excepciones compartidas. |
-| `cl.poc.atkbatch.shared.logging` | Contexto MDC para trazabilidad. |
-| `cl.poc.atkbatch.shared.util` | Utilidades compartidas. |
+| `cl.atk.nomina.batch` | Clase principal Spring Boot. |
+| `cl.atk.nomina.batch.api.controller` | Endpoints REST productivos y diagnosticos. |
+| `cl.atk.nomina.batch.api.dto` | Requests/responses REST. |
+| `cl.atk.nomina.batch.api.mapper` | Mapeo de entidades internas a DTOs. |
+| `cl.atk.nomina.batch.batch.config` | Configuracion Spring Batch y datasource local Oracle. |
+| `cl.atk.nomina.batch.batch.reader` | Lectura de nominas desde Artikos o fixtures simulados. |
+| `cl.atk.nomina.batch.batch.processor` | Procesamiento de nominas/documentos en steps batch. |
+| `cl.atk.nomina.batch.batch.writer` | Escritura de resultados y envio `NOMFACTRES`. |
+| `cl.atk.nomina.batch.config` | Propiedades y validadores de configuracion. |
+| `cl.atk.nomina.batch.domain` | Modelo de dominio interno y entidad `CONTROL_NOMINA`. |
+| `cl.atk.nomina.batch.domain.artikos` | Modelos/configuracion especificos de Artikos. |
+| `cl.atk.nomina.batch.domain.error` | Tipos de error de integracion. |
+| `cl.atk.nomina.batch.repository` | Repositorios JPA. |
+| `cl.atk.nomina.batch.service` | Servicios de negocio, control, parser, store y purga. |
+| `cl.atk.nomina.batch.service.artikos` | Cliente SOAP, builders, parsers y masking Artikos. |
+| `cl.atk.nomina.batch.shared.exception` | Excepciones compartidas. |
+| `cl.atk.nomina.batch.shared.logging` | Contexto MDC para trazabilidad. |
+| `cl.atk.nomina.batch.shared.util` | Utilidades compartidas. |
 
 ## Confirmed Findings
 
@@ -65,7 +65,7 @@ Se aplicaron cambios documentales:
 
 | Pendiente | Estado | Razon |
 | --- | --- | --- |
-| Renombrar `cl.poc.atkbatch` | REQUIERE VALIDACION | Falta confirmar namespace corporativo definitivo. |
+| Namespace base `cl.atk.nomina.batch` | CONFIRMADO | Migrado en Sprint 8.6.1 tras validacion corporativa. |
 | Eliminar componentes simulados | REQUIERE VALIDACION | Siguen siendo usados por tests y escenarios locales. |
 | Endurecer endpoint admin de purga | REQUIERE VALIDACION | Falta definicion de autenticacion/autorizacion corporativa. |
 | Eliminar endpoints diagnosticos | REQUIERE VALIDACION | Estan aislados por property, pero produccion puede exigir remocion completa. |
@@ -156,14 +156,14 @@ Hallazgo:
 
 ## Risks
 
-- REQUIERE VALIDACION: package base actual conserva `poc`, lo que puede ser objetado en revision productiva.
+- CONFIRMADO: package base migrado a `cl.atk.nomina.batch` en Sprint 8.6.1.
 - REQUIERE VALIDACION: no hay autenticacion/autorizacion definida para endpoints productivos o admin.
 - REQUIERE VALIDACION: endpoint administrativo de purga debe protegerse antes de produccion.
 - SUPUESTO: mantener componentes simulados en main es aceptable mientras sigan usados por tests/local; podria requerir moverlos a test fixtures.
 
 ## Questions For Architecture
 
-- Cual es el namespace Java corporativo definitivo?
+- Namespace Java corporativo definitivo: `cl.atk.nomina.batch`.
 - El endpoint batch start debe aceptar body ausente o `profile` debe ser obligatorio siempre?
 - Cual es el mecanismo oficial de autenticacion/autorizacion?
 - El endpoint de purga metadata debe quedar detras de rol administrativo?

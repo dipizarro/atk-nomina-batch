@@ -2,38 +2,34 @@
 
 ## Status
 
-Proposed
+Accepted
 
 ## Context
 
-El package base actual del proyecto es:
+El package base original del proyecto era:
 
 ```text
 cl.poc.atkbatch
 ```
 
-El servicio ya evoluciono desde una prueba inicial hacia una aplicacion batch real para integracion Artikos. El nombre del artefacto y la documentacion principal ya fueron normalizados, pero el namespace Java conserva `poc`.
+El servicio ya evoluciono desde una prueba inicial hacia una aplicacion batch real para integracion Artikos. El nombre del artefacto y la documentacion principal ya fueron normalizados.
 
-Las skills ZS revisadas indican que no se debe inventar un dominio corporativo ni cambiar un package base sin confirmacion del lider de integracion o arquitecto.
+En Sprint 8.6.1 se confirmo el namespace corporativo objetivo:
+
+```text
+cl.atk.nomina.batch
+```
 
 ## Decision
 
-No renombrar masivamente el package base en Sprint 8.6.
-
-La decision actual es mantener `cl.poc.atkbatch` hasta confirmar el namespace corporativo definitivo.
+Migrar el namespace base Java desde `cl.poc.atkbatch` hacia `cl.atk.nomina.batch`.
 
 ## Consequences
 
-- Se evita un refactor masivo sin confirmacion formal.
-- Se reduce el riesgo de romper imports, tests, configuracion de logs y paquetes escaneados por Spring.
-- Queda deuda tecnica visible porque el namespace conserva una referencia historica a POC.
+- El namespace queda alineado con el estandar validado para la aplicacion.
+- Imports, packages, tests y configuracion de logs deben mantenerse bajo `cl.atk.nomina.batch`.
+- Se elimina la deuda tecnica asociada al namespace historico con referencia a POC.
 
 ## Next Step
 
-Validar con arquitectura o lider de integracion el namespace definitivo antes de migrar.
-
-Opciones a validar:
-
-- `cl.atk.nomina.batch`
-- `cl.zurich.artikos.nomina`
-- otro namespace corporativo oficial.
+Mantener nuevas clases bajo `cl.atk.nomina.batch` y evitar reintroducir paquetes `cl.poc.atkbatch`.
