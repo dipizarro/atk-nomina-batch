@@ -19,9 +19,10 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 
-@Tag(name = "Control Nomina", description = "Diagnostico temporal de persistencia Oracle para CONTROL_NOMINA")
+@Tag(name = "Control Nomina Diagnostic", description = "Endpoints temporales de diagnostico Oracle; no usar en produccion")
 @RestController
 @RequestMapping("/api/v1/control-nomina")
+@Deprecated(since = "8.1", forRemoval = false)
 public class ControlNominaDiagnosticController {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ControlNominaDiagnosticController.class);
@@ -39,7 +40,7 @@ public class ControlNominaDiagnosticController {
         this.mapper = mapper;
     }
 
-    @Operation(summary = "Ejecuta una prueba temporal de insercion y actualizacion en CONTROL_NOMINA")
+    @Operation(summary = "[DIAGNOSTIC - not for production] Ejecuta una prueba temporal de insercion y actualizacion en CONTROL_NOMINA")
     @PostMapping("/test")
     public ControlNominaResponse testControlNominaPersistence() {
         LOGGER.info("Running CONTROL_NOMINA diagnostic test jobExecutionId={} numeroNomina={}",
@@ -67,7 +68,7 @@ public class ControlNominaDiagnosticController {
         return mapper.toResponse(entity);
     }
 
-    @Operation(summary = "Consulta registros CONTROL_NOMINA por ejecucion batch")
+    @Operation(summary = "[DIAGNOSTIC - not for production] Consulta registros CONTROL_NOMINA por ejecucion batch")
     @GetMapping("/jobs/{jobExecutionId}")
     public List<ControlNominaResponse> findByJobExecutionId(@PathVariable Long jobExecutionId) {
         List<ControlNominaResponse> results = controlNominaService.findByJobExecutionId(jobExecutionId).stream()
@@ -77,7 +78,7 @@ public class ControlNominaDiagnosticController {
         return results;
     }
 
-    @Operation(summary = "Consulta un registro CONTROL_NOMINA especifico")
+    @Operation(summary = "[DIAGNOSTIC - not for production] Consulta un registro CONTROL_NOMINA especifico")
     @GetMapping("/jobs/{jobExecutionId}/nominas/{numeroNomina}")
     public ControlNominaResponse findByJobExecutionIdAndNumeroNomina(
             @PathVariable Long jobExecutionId,

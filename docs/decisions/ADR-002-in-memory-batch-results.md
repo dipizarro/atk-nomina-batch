@@ -1,4 +1,4 @@
-# ADR-002: Resultados batch en memoria para la POC
+# ADR-002: Resultados batch en memoria
 
 ## Estado
 
@@ -6,7 +6,7 @@ Aceptada
 
 ## Contexto
 
-La POC necesita exponer un resumen de procesamiento masivo simulado sin incorporar todavia una base de datos propia para resultados funcionales. Spring Batch mantiene su metadata tecnica en H2, pero los totales de nominas, documentos, conciliaciones, distribuciones y XML NOMFACTRES generados son informacion de salida de la POC.
+La aplicacion necesita exponer un resumen de procesamiento masivo simulado sin incorporar todavia una base de datos propia para resultados funcionales. Spring Batch mantiene su metadata tecnica, pero los totales de nominas, documentos, conciliaciones, distribuciones y XML NOMFACTRES generados son informacion de salida operacional.
 
 ## Decision
 

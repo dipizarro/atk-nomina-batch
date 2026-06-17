@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Configuration status="WARN">
     <Properties>
-        <Property name="APP_NAME">atk-nomina-batch-poc</Property>
+        <Property name="APP_NAME">atk-nomina-batch</Property>
         <Property name="LOG_PATH">logs</Property>
         <Property name="LOG_PATTERN">%d{yyyy-MM-dd'T'HH:mm:ss.SSSXXX} %-5level [%t] %logger{36} - %msg%n%throwable</Property>
     </Properties>

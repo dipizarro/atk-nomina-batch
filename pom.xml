@@ -11,11 +11,11 @@
         <relativePath/>
     </parent>
 
-    <groupId>cl.poc</groupId>
-    <artifactId>atk-nomina-batch-poc</artifactId>
+    <groupId>cl.atk</groupId>
+    <artifactId>atk-nomina-batch</artifactId>
     <version>0.0.1-SNAPSHOT</version>
-    <name>atk-nomina-batch-poc</name>
-    <description>POC Spring Batch para procesamiento de nomina ATK</description>
+    <name>atk-nomina-batch</name>
+    <description>Servicio Spring Batch para integracion de nominas Artikos</description>
 
     <properties>
         <java.version>17</java.version>

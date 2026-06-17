@@ -6,7 +6,7 @@ Aceptada
 
 ## Contexto
 
-La POC requiere ejecutar procesamiento batch bajo demanda para validar flujos de nomina, parametrizacion y respuesta operacional sin depender inicialmente de un scheduler externo.
+La aplicacion requiere ejecutar procesamiento batch bajo demanda para validar flujos de nomina, parametrizacion y respuesta operacional sin depender inicialmente de un scheduler externo.
 
 ## Decision
 

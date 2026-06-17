@@ -7,9 +7,9 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 
 @SpringBootApplication
 @EnableConfigurationProperties(ArtikosProperties.class)
-public class AtkNominaBatchPocApplication {
+public class AtkNominaBatchApplication {
 
     public static void main(String[] args) {
-        SpringApplication.run(AtkNominaBatchPocApplication.class, args);
+        SpringApplication.run(AtkNominaBatchApplication.class, args);
     }
 }

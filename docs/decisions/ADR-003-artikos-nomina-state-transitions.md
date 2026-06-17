@@ -6,7 +6,7 @@ Aceptada
 
 ## Contexto
 
-La POC integra tres operaciones SOAP de Artikos QA:
+La aplicacion integra tres operaciones SOAP de Artikos QA:
 
 - `NOMFACTERP`: consulta nominas disponibles.
 - `NOMFACTCONFIR`: confirma recepcion de una nomina.

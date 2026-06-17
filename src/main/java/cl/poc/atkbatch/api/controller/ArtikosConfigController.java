@@ -16,7 +16,8 @@ import org.springframework.web.server.ResponseStatusException;
 
 @RestController
 @RequestMapping("/api/v1/artikos/qa/config")
-@Tag(name = "Artikos QA", description = "Diagnostico de configuracion SOAP QA")
+@Tag(name = "Artikos QA Diagnostic", description = "Endpoint temporal de diagnostico de configuracion SOAP QA; no usar en produccion")
+@Deprecated(since = "8.1", forRemoval = false)
 public class ArtikosConfigController {
 
     private final ArtikosMaskedConfigService maskedConfigService;
@@ -26,7 +27,7 @@ public class ArtikosConfigController {
     }
 
     @GetMapping("/{profile}")
-    @Operation(summary = "Muestra configuracion Artikos QA enmascarada por perfil")
+    @Operation(summary = "[DIAGNOSTIC - not for production] Muestra configuracion Artikos QA enmascarada por perfil")
     public ArtikosMaskedProfileConfigResponse getMaskedConfig(@PathVariable String profile) {
         return maskedConfigService.getMaskedConfig(parseProfile(profile));
     }

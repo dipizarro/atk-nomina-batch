@@ -39,7 +39,8 @@ import org.springframework.web.server.ResponseStatusException;
 
 @RestController
 @RequestMapping("/api/v1/artikos/qa/nominas")
-@Tag(name = "Artikos QA", description = "Diagnostico de conectividad SOAP QA para operaciones Artikos")
+@Tag(name = "Artikos QA Diagnostic", description = "Endpoints temporales de diagnostico SOAP QA; no usar en produccion")
+@Deprecated(since = "8.1", forRemoval = false)
 public class ArtikosDiagnosticController {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ArtikosDiagnosticController.class);
@@ -64,7 +65,7 @@ public class ArtikosDiagnosticController {
     }
 
     @PostMapping("/fetch")
-    @Operation(summary = "Consulta nominas disponibles en Artikos QA con NOMFACTERP")
+    @Operation(summary = "[DIAGNOSTIC - not for production] Consulta nominas disponibles en Artikos QA con NOMFACTERP")
     public FetchNominaResponse fetchNomina(@Valid @RequestBody FetchNominaRequest request) {
         ArtikosProfileType profileType = parseProfile(request.profile());
         String rawXml = soapClient.fetchNominaRawXml(profileType);
@@ -97,7 +98,7 @@ public class ArtikosDiagnosticController {
     }
 
     @PostMapping("/confirm")
-    @Operation(summary = "Confirma recepcion de nomina en Artikos QA con NOMFACTCONFIR")
+    @Operation(summary = "[DIAGNOSTIC - not for production] Confirma recepcion de nomina en Artikos QA con NOMFACTCONFIR")
     public ConfirmNominaResponse confirmNomina(@Valid @RequestBody ConfirmNominaRequest request) {
         ArtikosProfileType profileType = parseProfile(request.profile());
         String rawXml = soapClient.confirmNominaRawXml(
@@ -117,7 +118,7 @@ public class ArtikosDiagnosticController {
     }
 
     @PostMapping("/result/test")
-    @Operation(summary = "Envia resultado de procesamiento de nomina en Artikos QA con NOMFACTRES")
+    @Operation(summary = "[DIAGNOSTIC - not for production] Envia resultado de procesamiento de nomina en Artikos QA con NOMFACTRES")
     public SendNominaResultResponse sendNominaResult(@Valid @RequestBody SendNominaResultRequest request) {
         ArtikosProfileType profileType = parseProfile(request.profile());
         ResultadoNomina resultadoNomina = buildDiagnosticResult(profileType, request);
@@ -135,7 +136,7 @@ public class ArtikosDiagnosticController {
     }
 
     @GetMapping("/config/{profile}")
-    @Operation(summary = "Muestra configuracion Artikos QA enmascarada por perfil")
+    @Operation(summary = "[DIAGNOSTIC - not for production] Muestra configuracion Artikos QA enmascarada por perfil")
     public ArtikosMaskedProfileConfigResponse getMaskedConfig(@PathVariable String profile) {
         return maskedConfigService.getMaskedConfig(parseProfile(profile));
     }

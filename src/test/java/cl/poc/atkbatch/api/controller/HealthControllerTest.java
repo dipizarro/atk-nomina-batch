@@ -23,6 +23,6 @@ class HealthControllerTest {
         mockMvc.perform(get("/api/v1/health"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status", is("UP")))
-                .andExpect(jsonPath("$.application", is("atk-nomina-batch-poc")));
+                .andExpect(jsonPath("$.application", is("atk-nomina-batch")));
     }
 }
