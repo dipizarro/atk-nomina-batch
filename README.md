@@ -52,6 +52,7 @@ La aplicacion expone:
 - Consultar batch de nominas: `GET /api/v1/nominas/batch/{jobExecutionId}`
 - Consultar resumen del batch: `GET /api/v1/nominas/batch/{jobExecutionId}/summary`
 - Consultar resultado por nomina: `GET /api/v1/nominas/batch/{jobExecutionId}/results/{numeroNomina}`
+- Simular o ejecutar purga de metadata Spring Batch: `POST /api/v1/admin/batch-metadata/purge`
 - Actuator health: `GET /actuator/health`
 - Consola H2: `GET /h2-console`
 - Swagger UI: `GET /swagger-ui.html`
@@ -80,6 +81,39 @@ src/main/resources/db/oracle/V001__create_control_nomina.sql
 Para esta etapa de la POC, ambos scripts deben ejecutarse manualmente en SQL Developer con el usuario/esquema de la
 aplicacion. `V000` crea las tablas `BATCH_*` que Spring Batch consulta antes de iniciar el job; `V001` crea
 `CONTROL_NOMINA`.
+
+## Purga de metadata Spring Batch
+
+Las tablas `BATCH_*` son metadata tecnica de Spring Batch: instancias, ejecuciones, parametros, steps y contextos. No son
+la auditoria funcional de nominas. La trazabilidad funcional vive en `CONTROL_NOMINA`.
+
+Para evitar crecimiento indefinido de metadata tecnica, existe un endpoint administrativo de purga controlada:
+
+```http
+POST /api/v1/admin/batch-metadata/purge
+```
+
+Ejemplo de simulacion:
+
+```json
+{
+  "retentionDays": 30,
+  "dryRun": true,
+  "includeFailed": false
+}
+```
+
+Reglas principales:
+
+- `retentionDays` es obligatorio y debe ser mayor o igual a `1`.
+- `dryRun` por defecto es `true`; en ese modo solo devuelve conteos candidatos por tabla.
+- Por defecto considera ejecuciones finalizadas con status `COMPLETED` y `ABANDONED`.
+- `FAILED` solo se considera si `includeFailed=true`.
+- Nunca purga ejecuciones activas o sin `END_TIME`.
+- La eliminacion respeta dependencias: contextos de step, steps, contextos de job, parametros, ejecuciones e instancias sin ejecuciones restantes.
+
+Ejecutar con `dryRun=false` elimina registros reales de `BATCH_*`; en produccion este endpoint debe protegerse con
+autenticacion y autorizacion.
 
 ## Validacion
 

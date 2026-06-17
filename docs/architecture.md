@@ -31,11 +31,29 @@ procesada y el XML NOMFACTRES generado.
 
 El job procesa nominas completas mediante `ItemReader`, `ItemProcessor` e `ItemWriter`.
 
-- Reader: parsea una vez el XML SOAP Artikos local y simula una cola de nominas segun `atk.batch.simulation-nominas`.
-- Processor: procesa cada nomina completa, valida sus documentos y genera un NOMFACTRES por nomina.
-- Writer: registra totales por chunk y agrega resultados por `jobExecutionId` y `numeroNomina` al store en memoria.
+- Reader real: consulta Artikos QA con `NOMFACTERP`, parsea la respuesta SOAP y entrega una nomina por item.
+- Processor real: registra `CONTROL_NOMINA` en `PROCESSING`, confirma recepcion con `NOMFACTCONFIR` cuando `dryRun=false`, procesa documentos y genera el XML `NOMFACTRES`.
+- Writer real: envia `NOMFACTRES` cuando `dryRun=false`, actualiza `CONTROL_NOMINA` con `OK`, `NOK` o `ERROR`, y agrega resultados por `jobExecutionId` y `numeroNomina` al store en memoria.
+- Componentes simulados: se conservan para pruebas locales y evolucion de la POC, pero el job principal usa el flujo Artikos.
 
-El tamano de chunk se configura con `atk.batch.chunk-size`.
+Para SOAP real, el tamano de chunk se configura con `atk.batch.real.chunk-size` y se recomienda `1`, porque cada nomina implica confirmacion y envio de resultado.
+
+## Estados funcionales Artikos
+
+Las pruebas contra Artikos QA y SoapUI mostraron que `NOMFACTERP` puede seguir devolviendo una nomina aunque no este apta para avanzar en las operaciones siguientes.
+
+Validaciones funcionales observadas:
+
+- `NOMFACTCONFIR` requiere que la nomina este en estado `En Integracion`.
+- `NOMFACTRES` requiere que la nomina este en estado `Recibida`.
+
+Si Artikos rechaza una operacion por estado, la respuesta llega con `MsgStatus=1` y debe registrarse como error funcional en `CONTROL_NOMINA`.
+
+La decision queda documentada en:
+
+```text
+docs/decisions/ADR-003-artikos-nomina-state-transitions.md
+```
 
 ## Persistencia y metadata batch
 
