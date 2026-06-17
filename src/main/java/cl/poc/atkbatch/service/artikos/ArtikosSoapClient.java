@@ -1,9 +1,11 @@
 package cl.poc.atkbatch.service.artikos;
 
 import cl.poc.atkbatch.config.ArtikosProperties;
+import cl.poc.atkbatch.domain.ResultadoNomina;
 import cl.poc.atkbatch.domain.artikos.ArtikosOperationConfig;
 import cl.poc.atkbatch.domain.artikos.ArtikosOperationType;
 import cl.poc.atkbatch.domain.artikos.ArtikosProfileType;
+import cl.poc.atkbatch.service.NominaResultXmlService;
 import java.io.IOException;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
@@ -28,16 +30,22 @@ public class ArtikosSoapClient {
     private final ArtikosProperties artikosProperties;
     private final ArtikosNominaSoapRequestBuilder requestBuilder;
     private final ArtikosConfirmacionSoapRequestBuilder confirmacionRequestBuilder;
+    private final ArtikosResultadoSoapRequestBuilder resultadoRequestBuilder;
+    private final NominaResultXmlService nominaResultXmlService;
     private final RestClient restClient;
 
     public ArtikosSoapClient(
             ArtikosProperties artikosProperties,
             ArtikosNominaSoapRequestBuilder requestBuilder,
             ArtikosConfirmacionSoapRequestBuilder confirmacionRequestBuilder,
+            ArtikosResultadoSoapRequestBuilder resultadoRequestBuilder,
+            NominaResultXmlService nominaResultXmlService,
             RestClient.Builder restClientBuilder) {
         this.artikosProperties = artikosProperties;
         this.requestBuilder = requestBuilder;
         this.confirmacionRequestBuilder = confirmacionRequestBuilder;
+        this.resultadoRequestBuilder = resultadoRequestBuilder;
+        this.nominaResultXmlService = nominaResultXmlService;
         this.restClient = restClientBuilder.build();
     }
 
@@ -118,6 +126,45 @@ public class ArtikosSoapClient {
 
     public ArtikosOperationConfig resultadoNominaConfig(ArtikosProfileType profileType) {
         return artikosProperties.requireOperationConfig(profileType, ArtikosOperationType.RESULTADO_NOMINA);
+    }
+
+    public String sendNominaResultRawXml(
+            ArtikosProfileType profileType,
+            ResultadoNomina resultadoNomina) {
+        ArtikosOperationConfig operationConfig = resultadoNominaConfig(profileType);
+        String endpoint = artikosProperties.getEndpoints().getConnectorUrl();
+        String nomfactresXml = StringUtils.hasText(resultadoNomina.nomfactresXml())
+                ? resultadoNomina.nomfactresXml()
+                : nominaResultXmlService.buildNomfactresXml(resultadoNomina, operationConfig);
+        String requestXml = resultadoRequestBuilder.buildNomfactresRequest(operationConfig, nomfactresXml);
+
+        try {
+            logOperation(profileType, ArtikosOperationType.RESULTADO_NOMINA, endpoint, operationConfig);
+            LOGGER.info("Artikos NOMFACTRES request shape profile={} numeroNomina={} {}",
+                    profileType, resultadoNomina.numeroNomina(), resultadoRequestBuilder.describeContractShape(requestXml));
+            LOGGER.debug("Artikos NOMFACTRES request profile={} numeroNomina={} xml={}",
+                    profileType, resultadoNomina.numeroNomina(), resultadoRequestBuilder.maskToken(requestXml));
+
+            return postSoap(
+                    endpoint,
+                    requestXml,
+                    resolveSoapAction(
+                            artikosProperties.getConnectorSoapAction(),
+                            artikosProperties.getSoapAction(),
+                            DEFAULT_CONNECTOR_SOAP_ACTION),
+                    "result",
+                    profileType,
+                    resultadoNomina.numeroNomina());
+        } catch (IllegalArgumentException exception) {
+            throw exception;
+        } catch (ArtikosSoapClientException exception) {
+            throw exception;
+        } catch (RestClientException exception) {
+            LOGGER.warn("Artikos QA result SOAP connection error profile={} numeroNomina={} cause={}",
+                    profileType, resultadoNomina.numeroNomina(), exception.getMessage(), exception);
+            throw new ArtikosSoapClientException("No fue posible enviar resultado de nomina en Artikos QA",
+                    exception);
+        }
     }
 
     private String postSoap(

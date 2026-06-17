@@ -5,9 +5,14 @@ import cl.poc.atkbatch.api.dto.ConfirmNominaRequest;
 import cl.poc.atkbatch.api.dto.ConfirmNominaResponse;
 import cl.poc.atkbatch.api.dto.FetchNominaRequest;
 import cl.poc.atkbatch.api.dto.FetchNominaResponse;
+import cl.poc.atkbatch.api.dto.SendNominaResultRequest;
+import cl.poc.atkbatch.api.dto.SendNominaResultResponse;
 import cl.poc.atkbatch.domain.Nomina;
+import cl.poc.atkbatch.domain.ResultadoDocumento;
+import cl.poc.atkbatch.domain.ResultadoNomina;
 import cl.poc.atkbatch.domain.artikos.ArtikosGenericResponse;
 import cl.poc.atkbatch.domain.artikos.ArtikosProfileType;
+import cl.poc.atkbatch.service.NominaResultXmlService;
 import cl.poc.atkbatch.service.artikos.ArtikosGenericSoapResponseParser;
 import cl.poc.atkbatch.service.artikos.ArtikosMaskedConfigService;
 import cl.poc.atkbatch.service.artikos.ArtikosSoapClient;
@@ -17,6 +22,7 @@ import cl.poc.atkbatch.shared.exception.NominaXmlParsingException;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import java.util.List;
 import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -33,7 +39,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 @RestController
 @RequestMapping("/api/v1/artikos/qa/nominas")
-@Tag(name = "Artikos QA", description = "Diagnostico de conectividad SOAP QA para consulta NOMFACTERP")
+@Tag(name = "Artikos QA", description = "Diagnostico de conectividad SOAP QA para operaciones Artikos")
 public class ArtikosDiagnosticController {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ArtikosDiagnosticController.class);
@@ -42,16 +48,19 @@ public class ArtikosDiagnosticController {
     private final ArtikosSoapResponseParser responseParser;
     private final ArtikosGenericSoapResponseParser genericResponseParser;
     private final ArtikosMaskedConfigService maskedConfigService;
+    private final NominaResultXmlService nominaResultXmlService;
 
     public ArtikosDiagnosticController(
             ArtikosSoapClient soapClient,
             ArtikosSoapResponseParser responseParser,
             ArtikosGenericSoapResponseParser genericResponseParser,
-            ArtikosMaskedConfigService maskedConfigService) {
+            ArtikosMaskedConfigService maskedConfigService,
+            NominaResultXmlService nominaResultXmlService) {
         this.soapClient = soapClient;
         this.responseParser = responseParser;
         this.genericResponseParser = genericResponseParser;
         this.maskedConfigService = maskedConfigService;
+        this.nominaResultXmlService = nominaResultXmlService;
     }
 
     @PostMapping("/fetch")
@@ -107,6 +116,24 @@ public class ArtikosDiagnosticController {
                         : response.messageText());
     }
 
+    @PostMapping("/result/test")
+    @Operation(summary = "Envia resultado de procesamiento de nomina en Artikos QA con NOMFACTRES")
+    public SendNominaResultResponse sendNominaResult(@Valid @RequestBody SendNominaResultRequest request) {
+        ArtikosProfileType profileType = parseProfile(request.profile());
+        ResultadoNomina resultadoNomina = buildDiagnosticResult(profileType, request);
+        String rawXml = soapClient.sendNominaResultRawXml(profileType, resultadoNomina);
+        ArtikosGenericResponse response = genericResponseParser.parseGenericResponse(rawXml);
+
+        return new SendNominaResultResponse(
+                profileType.name(),
+                request.numeroNomina(),
+                response.success(),
+                response.msgStatus(),
+                response.success()
+                        ? "Resultado enviado correctamente a Artikos"
+                        : response.messageText());
+    }
+
     @GetMapping("/config/{profile}")
     @Operation(summary = "Muestra configuracion Artikos QA enmascarada por perfil")
     public ArtikosMaskedProfileConfigResponse getMaskedConfig(@PathVariable String profile) {
@@ -119,6 +146,51 @@ public class ArtikosDiagnosticController {
         } catch (IllegalArgumentException exception) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, exception.getMessage(), exception);
         }
+    }
+
+    private ResultadoNomina buildDiagnosticResult(
+            ArtikosProfileType profileType,
+            SendNominaResultRequest request) {
+        String status = request.normalizedDocEstado();
+        ResultadoDocumento documento = new ResultadoDocumento(
+                null,
+                status,
+                request.docDescEstado(),
+                request.docFolio(),
+                request.docRutProveedor(),
+                request.docTipoDoc(),
+                request.monto());
+        int totalOk = "OK".equals(status) ? 1 : 0;
+        int totalNok = "NOK".equals(status) ? 1 : 0;
+
+        ResultadoNomina resultado = new ResultadoNomina(
+                null,
+                request.numeroNomina(),
+                1,
+                totalOk,
+                totalNok,
+                0,
+                0,
+                List.of(documento),
+                "",
+                totalNok == 0 ? "OK" : "NOK",
+                null);
+
+        String nomfactresXml = nominaResultXmlService.buildNomfactresXml(
+                resultado,
+                soapClient.resultadoNominaConfig(profileType));
+        return new ResultadoNomina(
+                resultado.jobExecutionId(),
+                resultado.numeroNomina(),
+                resultado.totalDocuments(),
+                resultado.totalOk(),
+                resultado.totalNok(),
+                resultado.totalConciliaciones(),
+                resultado.totalDistribuciones(),
+                resultado.documentos(),
+                nomfactresXml,
+                resultado.status(),
+                resultado.errorMessage());
     }
 
     @ExceptionHandler(ArtikosSoapClientException.class)
