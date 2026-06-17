@@ -1,5 +1,10 @@
 target/
 logs/
+*.log
+.env
+*.env
+*secrets*
+!docs/secrets.md
 reference-oracle-app/
 .mvn/wrapper/maven-wrapper.jar
 src/main/resources/application-local.properties

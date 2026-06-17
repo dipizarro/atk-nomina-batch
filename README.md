@@ -26,10 +26,10 @@ La aplicacion consulta nominas con `NOMFACTERP`, confirma recepcion con `NOMFACT
 
 ## Ejecucion local
 
-La aplicacion usa el perfil `local` por defecto y se conecta a Oracle. La configuracion local sensible vive en `src/main/resources/application-local.properties`, que esta ignorado por Git. Usa `src/main/resources/application-local.example.properties` como plantilla.
+La aplicacion debe ejecutarse con el perfil `local` para desarrollo en la maquina del equipo. La configuracion local sensible vive en `src/main/resources/application-local.properties`, que esta ignorado por Git. Usa `src/main/resources/application-local.example.properties` como plantilla.
 
 ```powershell
-mvn spring-boot:run
+mvn spring-boot:run -Dspring-boot.run.profiles=local
 ```
 
 Tambien puedes sobreescribir valores desde variables de entorno y luego copiarlos al archivo local si lo prefieres:
@@ -65,8 +65,23 @@ La configuracion base vive en `src/main/resources/application.properties`. La co
 - `atk.batch.real.chunk-size=1`
 - `atk.batch.sample-file=classpath:samples/ZSVIDA_Nom15960.xml`
 - `app.diagnostics.enabled=false`
+- `app.config.validation.strict=false`
 
 En Oracle, Spring Batch no crea su metadata automaticamente. La aplicacion usa `spring.batch.jdbc.initialize-schema=never`, por lo que los scripts SQL deben ejecutarse manualmente antes de disparar el endpoint de inicio.
+
+## Configuration and secrets
+
+La aplicacion separa configuracion por perfiles Spring:
+
+- `application.properties`: base comun sin secretos.
+- `application-local.properties`: desarrollo local, ignorado por Git.
+- `application-local.example.properties`: plantilla segura para desarrollo local.
+- `application-qa.properties`: QA con placeholders.
+- `application-prod.properties`: produccion con placeholders y diagnostics deshabilitado.
+
+QA y PROD deben resolver secretos desde Azure Key Vault, variables de entorno inyectadas por pipeline/runtime o un mecanismo administrado equivalente. Cuando la aplicacion corra en Azure, se debe preferir Managed Identity para acceder a Key Vault.
+
+No subir passwords, tokens Artikos, connection strings ni archivos `.env` al repositorio. La lista de secretos esperados y nombres recomendados esta en `docs/secrets.md`.
 
 ## Diagnostics mode
 
@@ -172,6 +187,7 @@ El servicio nacio como una POC para validar integracion SOAP Artikos, procesamie
 - Endpoints: `docs/endpoints.md`
 - Logging: `docs/logging.md`
 - Manejo de errores: `docs/error-handling.md`
+- Secretos y ambientes: `docs/secrets.md`
 - Deuda tecnica: `docs/technical-debt.md`
 - Decisiones: `docs/decisions`
 
@@ -184,5 +200,5 @@ mvn clean test
 ## Commit sugerido
 
 ```bash
-git commit -m "feat: formalize batch error handling policy"
+git commit -m "chore: externalize environment configuration and secrets strategy"
 ```

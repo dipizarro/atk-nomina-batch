@@ -39,8 +39,18 @@ Algunos componentes simulados siguen aportando valor para tests unitarios y esce
 
 ## Configuracion y secretos
 
+Abordado parcialmente en Sprint 8.5:
+
 - `application-local.properties` contiene configuracion sensible local y no debe versionarse.
-- Externalizar secretos hacia variables de entorno, vault corporativo o mecanismo administrado por plataforma.
+- `application-qa.properties` y `application-prod.properties` usan placeholders sin secretos reales.
+- `application-local.example.properties` queda como plantilla segura.
+- `docs/secrets.md` documenta nombres logicos, propiedades Spring y nombres sugeridos para Azure Key Vault.
+- `app.config.validation.strict=true` queda definido para QA/PROD.
+
+Pendiente:
+
+- Implementar integracion directa con Azure Key Vault si la plataforma no inyecta secretos como variables.
+- Definir el mecanismo final de Managed Identity, permisos y rotacion de secretos.
 - Revisar que logs y endpoints enmascarados nunca impriman tokens completos.
 - Evitar incluir valores reales en archivos de ejemplo.
 

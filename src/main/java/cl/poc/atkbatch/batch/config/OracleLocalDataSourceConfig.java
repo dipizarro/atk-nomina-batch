@@ -24,9 +24,8 @@ public class OracleLocalDataSourceConfig {
             @Value("${atk.oracle.password}") String password,
             @Value("${atk.oracle.driver-class-name}") String driverClassName,
             @Value("${atk.oracle.tns-admin:}") String tnsAdmin) throws SQLException {
-        LOGGER.info("Configuring Oracle DataSource url={} username={} driver={} tnsAdmin={} passwordPresent={} passwordLength={}",
-                url, username, driverClassName, tnsAdmin, password != null && !password.isBlank(),
-                password == null ? 0 : password.length());
+        LOGGER.info("Configuring Oracle DataSource url={} username={} driver={} tnsAdmin={} passwordPresent={}",
+                url, username, driverClassName, tnsAdmin, password != null && !password.isBlank());
 
         if (tnsAdmin != null && !tnsAdmin.isBlank()) {
             System.setProperty("oracle.net.tns_admin", tnsAdmin);
