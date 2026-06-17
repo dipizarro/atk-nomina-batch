@@ -5,6 +5,7 @@ import cl.poc.atkbatch.domain.ControlNominaStatus;
 import cl.poc.atkbatch.domain.ResultadoNomina;
 import cl.poc.atkbatch.repository.ControlNominaJpaRepository;
 import cl.poc.atkbatch.shared.logging.LoggingContext;
+import cl.poc.atkbatch.shared.util.StringSanitizer;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
@@ -99,7 +100,7 @@ public class ControlNominaService {
                     .orElseGet(() -> createBaseEntity(jobExecutionId, numeroNomina));
 
             entity.setStatus(ControlNominaStatus.ERROR);
-            entity.setErrorMessage(trimErrorMessage(errorMessage));
+            entity.setErrorMessage(StringSanitizer.truncate(errorMessage, 500));
             entity.setUpdatedAt(LocalDateTime.now());
 
             LOGGER.info("CONTROL_NOMINA error updated jobExecutionId={} numeroNomina={} status={} error={}",
@@ -126,12 +127,5 @@ public class ControlNominaService {
         entity.setNumeroNomina(numeroNomina);
         entity.setCreatedAt(LocalDateTime.now());
         return entity;
-    }
-
-    private String trimErrorMessage(String errorMessage) {
-        if (errorMessage == null || errorMessage.length() <= 500) {
-            return errorMessage;
-        }
-        return errorMessage.substring(0, 500);
     }
 }

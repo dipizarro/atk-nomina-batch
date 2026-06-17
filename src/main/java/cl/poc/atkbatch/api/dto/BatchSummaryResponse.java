@@ -11,5 +11,7 @@ public record BatchSummaryResponse(
         long totalDistribuciones,
         long nomfactresGenerated,
         String profile,
-        Boolean dryRun) {
+        Boolean dryRun,
+        String exitDescription,
+        String error) {
 }

@@ -19,8 +19,10 @@ import cl.poc.atkbatch.domain.artikos.ArtikosFetchedNomina;
 import cl.poc.atkbatch.domain.artikos.ArtikosGenericResponse;
 import cl.poc.atkbatch.domain.artikos.ArtikosOperationConfig;
 import cl.poc.atkbatch.domain.artikos.ArtikosProfileType;
+import cl.poc.atkbatch.domain.error.IntegrationErrorType;
 import cl.poc.atkbatch.service.BatchResultStore;
 import cl.poc.atkbatch.service.ControlNominaService;
+import cl.poc.atkbatch.service.NominaErrorPolicyService;
 import cl.poc.atkbatch.service.NominaProcessingService;
 import cl.poc.atkbatch.service.NominaResultXmlService;
 import cl.poc.atkbatch.service.NominaXmlParserService;
@@ -33,7 +35,9 @@ import org.springframework.batch.item.Chunk;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.util.StreamUtils;
 
+import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 
 class ArtikosBatchFlowTest {
 
@@ -135,17 +139,18 @@ class ArtikosBatchFlowTest {
 
         assertThatThrownBy(() -> processor.process(fetchedNomina(false)))
                 .isInstanceOf(ArtikosIntegrationException.class)
-                .hasMessageContaining("Confirmacion Artikos rechazada");
+                .hasMessageContaining("NOMINA_CONFIRM_ERROR")
+                .satisfies(exception -> assertThat(((ArtikosIntegrationException) exception).getErrorType())
+                        .isEqualTo(IntegrationErrorType.NOMINA_CONFIRM_ERROR));
         verify(controlNominaService).markError(eq(7L), eq(15960L), any());
     }
 
     @Test
-    void processorContinuesWhenNominaIsAlreadyOutsideIntegrationState() {
+    void processorMarksErrorWhenNominaIsAlreadyOutsideIntegrationState() {
         ControlNominaService controlNominaService = mock(ControlNominaService.class);
         ArtikosSoapClient soapClient = mock(ArtikosSoapClient.class);
         ArtikosGenericSoapResponseParser genericParser = mock(ArtikosGenericSoapResponseParser.class);
         when(soapClient.confirmNominaRawXml(ArtikosProfileType.VIDA, 15960L, 0)).thenReturn("<already-confirmed/>");
-        when(soapClient.resultadoNominaConfig(ArtikosProfileType.VIDA)).thenReturn(resultadoOperationConfig());
         when(genericParser.parseGenericResponse("<already-confirmed/>"))
                 .thenReturn(new ArtikosGenericResponse(
                         "NOMFACTCONFIR",
@@ -154,11 +159,30 @@ class ArtikosBatchFlowTest {
                         false));
         ArtikosNominaItemProcessor processor = processor(controlNominaService, soapClient, genericParser, "false");
 
-        ResultadoNomina result = processor.process(fetchedNomina(false));
+        assertThatThrownBy(() -> processor.process(fetchedNomina(false)))
+                .isInstanceOf(ArtikosIntegrationException.class)
+                .satisfies(exception -> assertThat(((ArtikosIntegrationException) exception).getErrorType())
+                        .isEqualTo(IntegrationErrorType.NOMINA_CONFIRM_ERROR));
 
-        assertThat(result.numeroNomina()).isEqualTo(15960L);
-        assertThat(result.totalOk()).isEqualTo(1);
         verify(controlNominaService).markProcessing(7L, 15960L);
+        verify(controlNominaService).markError(eq(7L), eq(15960L), any());
+    }
+
+    @Test
+    void processorReturnsNokWithoutThrowingForFunctionalDocumentError() {
+        ControlNominaService controlNominaService = mock(ControlNominaService.class);
+        ArtikosSoapClient soapClient = mock(ArtikosSoapClient.class);
+        ArtikosGenericSoapResponseParser genericParser = mock(ArtikosGenericSoapResponseParser.class);
+        when(soapClient.confirmNominaRawXml(ArtikosProfileType.VIDA, 15960L, 0)).thenReturn("<ok/>");
+        when(soapClient.resultadoNominaConfig(ArtikosProfileType.VIDA)).thenReturn(resultadoOperationConfig());
+        when(genericParser.parseGenericResponse("<ok/>"))
+                .thenReturn(new ArtikosGenericResponse("NOMFACTCONFIR", "0", "", true));
+        ArtikosNominaItemProcessor processor = processor(controlNominaService, soapClient, genericParser, "false");
+
+        ResultadoNomina result = processor.process(fetchedNominaWithZeroTotal(false));
+
+        assertThat(result.status()).isEqualTo("NOK");
+        assertThat(result.totalNok()).isEqualTo(1);
         verify(controlNominaService, never()).markError(any(), any(), any());
     }
 
@@ -213,7 +237,9 @@ class ArtikosBatchFlowTest {
 
         assertThatThrownBy(() -> writer.write(Chunk.of(result)))
                 .isInstanceOf(ArtikosIntegrationException.class)
-                .hasMessageContaining("NOMFACTRES Artikos rechazado");
+                .hasMessageContaining("NOMINA_RESULT_ERROR")
+                .satisfies(exception -> assertThat(((ArtikosIntegrationException) exception).getErrorType())
+                        .isEqualTo(IntegrationErrorType.NOMINA_RESULT_ERROR));
         verify(controlNominaService).markError(eq(7L), eq(15960L), any());
     }
 
@@ -227,6 +253,7 @@ class ArtikosBatchFlowTest {
                 soapClient,
                 genericParser,
                 new NominaProcessingService(new NominaDocumentoItemProcessor(), new NominaResultXmlService()),
+                new NominaErrorPolicyService(),
                 7L,
                 dryRun);
     }
@@ -241,6 +268,7 @@ class ArtikosBatchFlowTest {
                 soapClient,
                 genericParser,
                 controlNominaService,
+                new NominaErrorPolicyService(),
                 store,
                 "VIDA",
                 dryRun,
@@ -255,6 +283,49 @@ class ArtikosBatchFlowTest {
                 nomina.cabecera().numeroNomina(),
                 nomina.cabecera().tipoNomina(),
                 nomina.cabecera().cantidadDocumentos(),
+                "<raw/>",
+                dryRun);
+    }
+
+    private ArtikosFetchedNomina fetchedNominaWithZeroTotal(boolean dryRun) {
+        Nomina nomina = nominaXmlParserService.parseSampleFile();
+        var documento = nomina.documentos().get(0);
+        var invalidDocument = new cl.poc.atkbatch.domain.DocumentoContable(
+                documento.secuencia(),
+                documento.rutProveedor(),
+                documento.proveedor(),
+                documento.nacional(),
+                documento.idDocumento(),
+                documento.usuario(),
+                documento.numeroDocumento(),
+                documento.tipoDocumento(),
+                documento.tipoErp(),
+                documento.fechaEmision(),
+                documento.fechaVencimiento(),
+                documento.fechaRecepcion(),
+                documento.fechaRecepSii(),
+                documento.urlDocumento(),
+                documento.observacion(),
+                documento.docCurrency(),
+                documento.montoNeto(),
+                documento.montoIva(),
+                documento.montoExento(),
+                documento.otrosImpuestos(),
+                BigDecimal.ZERO,
+                documento.referencias(),
+                documento.conciliaciones());
+        Nomina invalidNomina = new Nomina(
+                nomina.msgCode(),
+                nomina.msgStatus(),
+                nomina.msgFromAddress(),
+                nomina.cabecera(),
+                List.of(invalidDocument));
+        return new ArtikosFetchedNomina(
+                ArtikosProfileType.VIDA,
+                invalidNomina,
+                invalidNomina.cabecera().numeroNomina(),
+                invalidNomina.cabecera().tipoNomina(),
+                invalidNomina.cabecera().cantidadDocumentos(),
                 "<raw/>",
                 dryRun);
     }

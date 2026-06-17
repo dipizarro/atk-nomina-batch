@@ -3,6 +3,7 @@ package cl.poc.atkbatch.service;
 import cl.poc.atkbatch.api.dto.BatchSummaryResponse;
 import cl.poc.atkbatch.api.dto.NominaResultResponse;
 import cl.poc.atkbatch.domain.ResultadoNomina;
+import cl.poc.atkbatch.shared.util.StringSanitizer;
 import org.springframework.batch.core.JobExecution;
 import org.springframework.batch.core.explore.JobExplorer;
 import org.springframework.http.HttpStatus;
@@ -38,7 +39,9 @@ public class BatchSummaryService {
                 summary.totalDistribuciones(),
                 summary.nomfactresGenerated(),
                 summary.metadata() == null ? null : summary.metadata().profile(),
-                summary.metadata() == null ? null : summary.metadata().dryRun());
+                summary.metadata() == null ? null : summary.metadata().dryRun(),
+                exitDescription(execution),
+                errorSummary(execution));
     }
 
     public NominaResultResponse getNominaResult(Long jobExecutionId, Long numeroNomina) {
@@ -60,5 +63,16 @@ public class BatchSummaryService {
                 result.totalDistribuciones(),
                 result.status(),
                 result.nomfactresXml());
+    }
+
+    private String exitDescription(JobExecution execution) {
+        return StringSanitizer.compactAndTruncate(execution.getExitStatus().getExitDescription(), 500);
+    }
+
+    private String errorSummary(JobExecution execution) {
+        if (!execution.getStatus().isUnsuccessful()) {
+            return null;
+        }
+        return StringSanitizer.compactAndTruncate(execution.getExitStatus().getExitDescription(), 500);
     }
 }

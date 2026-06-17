@@ -147,6 +147,20 @@ Las operaciones SOAP se registran como `NOMFACTERP`, `NOMFACTCONFIR` y `NOMFACTR
 
 La convencion completa esta en `docs/logging.md`.
 
+## Error handling policy
+
+La politica de errores esta documentada en `docs/error-handling.md`.
+
+Resumen operativo:
+
+- Sin nominas disponibles en Artikos: el job termina `COMPLETED` sin registros en `CONTROL_NOMINA`.
+- Error tecnico consultando Artikos: el job termina `FAILED`.
+- Rechazo de `NOMFACTCONFIR`: la nomina queda `ERROR` en `CONTROL_NOMINA` y el job termina `FAILED`.
+- Documento con validacion funcional NOK: el job continua, envia `NOMFACTRES` y la nomina queda `NOK`.
+- Rechazo o falla de `NOMFACTRES`: la nomina queda `ERROR` y el job termina `FAILED`.
+
+Los endpoints de estado/resumen devuelven errores compactados; el stacktrace completo queda en logs y metadata Spring Batch.
+
 ## Origen del proyecto
 
 El servicio nacio como una POC para validar integracion SOAP Artikos, procesamiento Spring Batch y persistencia Oracle. A partir de Sprint 8.1 el nombre y la documentacion principal se normalizan como aplicacion de integracion batch, manteniendo compatibilidad con componentes diagnosticos hasta su limpieza posterior.
@@ -157,6 +171,7 @@ El servicio nacio como una POC para validar integracion SOAP Artikos, procesamie
 - Flujo batch: `docs/batch-flow.md`
 - Endpoints: `docs/endpoints.md`
 - Logging: `docs/logging.md`
+- Manejo de errores: `docs/error-handling.md`
 - Deuda tecnica: `docs/technical-debt.md`
 - Decisiones: `docs/decisions`
 
@@ -169,5 +184,5 @@ mvn clean test
 ## Commit sugerido
 
 ```bash
-git commit -m "chore: isolate diagnostic endpoints behind configuration"
+git commit -m "feat: formalize batch error handling policy"
 ```

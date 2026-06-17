@@ -1,6 +1,7 @@
 package cl.poc.atkbatch.service;
 
 import cl.poc.atkbatch.api.dto.BatchStatusResponse;
+import cl.poc.atkbatch.shared.util.StringSanitizer;
 import org.springframework.batch.core.JobExecution;
 import org.springframework.batch.core.explore.JobExplorer;
 import org.springframework.http.HttpStatus;
@@ -27,9 +28,22 @@ public class BatchStatusService {
                 execution.getJobInstance().getJobName(),
                 execution.getStatus().name(),
                 execution.getExitStatus().getExitCode(),
+                exitDescription(execution),
                 execution.getCreateTime(),
                 execution.getStartTime(),
                 execution.getEndTime(),
+                errorSummary(execution),
                 "Estado consultado correctamente");
+    }
+
+    private String exitDescription(JobExecution execution) {
+        return StringSanitizer.compactAndTruncate(execution.getExitStatus().getExitDescription(), 500);
+    }
+
+    private String errorSummary(JobExecution execution) {
+        if (!execution.getStatus().isUnsuccessful()) {
+            return null;
+        }
+        return StringSanitizer.compactAndTruncate(execution.getExitStatus().getExitDescription(), 500);
     }
 }

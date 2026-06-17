@@ -4,7 +4,9 @@ import cl.poc.atkbatch.domain.ResultadoNomina;
 import cl.poc.atkbatch.domain.artikos.ArtikosOperation;
 import cl.poc.atkbatch.domain.artikos.ArtikosFetchedNomina;
 import cl.poc.atkbatch.domain.artikos.ArtikosGenericResponse;
+import cl.poc.atkbatch.domain.error.IntegrationErrorType;
 import cl.poc.atkbatch.service.ControlNominaService;
+import cl.poc.atkbatch.service.NominaErrorPolicyService;
 import cl.poc.atkbatch.service.NominaProcessingService;
 import cl.poc.atkbatch.service.artikos.ArtikosGenericSoapResponseParser;
 import cl.poc.atkbatch.service.artikos.ArtikosSoapClient;
@@ -22,6 +24,7 @@ public class ArtikosNominaItemProcessor implements ItemProcessor<ArtikosFetchedN
     private final ArtikosSoapClient soapClient;
     private final ArtikosGenericSoapResponseParser genericResponseParser;
     private final NominaProcessingService nominaProcessingService;
+    private final NominaErrorPolicyService errorPolicyService;
     private final Long jobExecutionId;
     private final boolean dryRun;
 
@@ -30,12 +33,14 @@ public class ArtikosNominaItemProcessor implements ItemProcessor<ArtikosFetchedN
             ArtikosSoapClient soapClient,
             ArtikosGenericSoapResponseParser genericResponseParser,
             NominaProcessingService nominaProcessingService,
+            NominaErrorPolicyService errorPolicyService,
             Long jobExecutionId,
             String dryRun) {
         this.controlNominaService = controlNominaService;
         this.soapClient = soapClient;
         this.genericResponseParser = genericResponseParser;
         this.nominaProcessingService = nominaProcessingService;
+        this.errorPolicyService = errorPolicyService;
         this.jobExecutionId = jobExecutionId;
         this.dryRun = Boolean.parseBoolean(dryRun);
     }
@@ -59,27 +64,25 @@ public class ArtikosNominaItemProcessor implements ItemProcessor<ArtikosFetchedN
         try {
             LOGGER.info("[CONTROL_NOMINA] PROCESSING jobExecutionId={} numeroNomina={} profile={}",
                     jobExecutionId, numeroNomina, item.profile());
-            controlNominaService.markProcessing(jobExecutionId, numeroNomina);
+            markProcessing(item);
 
             LoggingContext.putOperation(ArtikosOperation.NOMFACTCONFIR.name());
             LOGGER.info("Sending Artikos confirmation profile={} numeroNomina={}", item.profile(), numeroNomina);
             String confirmationRawXml = soapClient.confirmNominaRawXml(item.profile(), numeroNomina, 0);
             ArtikosGenericResponse confirmationResponse = genericResponseParser.parseGenericResponse(confirmationRawXml);
             if (!confirmationResponse.success()) {
-                if (isAlreadyOutsideIntegrationState(confirmationResponse.messageText())) {
-                    LOGGER.warn("Artikos confirmation skipped as non-blocking state condition profile={} "
-                                    + "numeroNomina={} msgStatus={} message={}",
-                            item.profile(),
-                            numeroNomina,
-                            confirmationResponse.msgStatus(),
-                            confirmationResponse.messageText());
-                    return processLocally(item);
-                }
                 String message = "Confirmacion Artikos rechazada: " + confirmationResponse.messageText();
                 LOGGER.warn("Artikos confirmation error profile={} numeroNomina={} msgStatus={} message={}",
                         item.profile(), numeroNomina, confirmationResponse.msgStatus(), confirmationResponse.messageText());
-                controlNominaService.markError(jobExecutionId, numeroNomina, message);
-                throw new ArtikosIntegrationException(message);
+                ArtikosIntegrationException exception = new ArtikosIntegrationException(
+                        IntegrationErrorType.NOMINA_CONFIRM_ERROR,
+                        item.profile().name(),
+                        numeroNomina,
+                        ArtikosOperation.NOMFACTCONFIR.name(),
+                        message,
+                        null);
+                markControlErrorIfRequired(exception);
+                throw exception;
             }
             LOGGER.info("Artikos confirmation OK profile={} numeroNomina={}", item.profile(), numeroNomina);
             LoggingContext.clearOperation();
@@ -88,17 +91,55 @@ public class ArtikosNominaItemProcessor implements ItemProcessor<ArtikosFetchedN
         } catch (ArtikosIntegrationException exception) {
             throw exception;
         } catch (RuntimeException exception) {
-            controlNominaService.markError(jobExecutionId, numeroNomina, exception.getMessage());
-            throw new ArtikosIntegrationException("Fallo la confirmacion de nomina Artikos", exception);
+            ArtikosIntegrationException integrationException = new ArtikosIntegrationException(
+                    IntegrationErrorType.NOMINA_PROCESSING_ERROR,
+                    item.profile().name(),
+                    numeroNomina,
+                    currentOperation(),
+                    exception.getMessage(),
+                    exception);
+            markControlErrorIfRequired(integrationException);
+            throw integrationException;
         } finally {
             LoggingContext.clearAll();
         }
     }
 
-    private boolean isAlreadyOutsideIntegrationState(String messageText) {
-        return messageText != null
-                && messageText.contains("Solo se puede confirmar la recepci")
-                && messageText.contains("estado En Integraci");
+    private void markProcessing(ArtikosFetchedNomina item) {
+        try {
+            controlNominaService.markProcessing(jobExecutionId, item.numeroNomina());
+        } catch (RuntimeException exception) {
+            throw new ArtikosIntegrationException(
+                    IntegrationErrorType.ORACLE_CONTROL_ERROR,
+                    item.profile().name(),
+                    item.numeroNomina(),
+                    "CONTROL_NOMINA",
+                    exception.getMessage(),
+                    exception);
+        }
+    }
+
+    private void markControlErrorIfRequired(ArtikosIntegrationException exception) {
+        if (errorPolicyService.shouldMarkControlNominaError(exception.getErrorType(), exception.getNumeroNomina())) {
+            try {
+                controlNominaService.markError(
+                        jobExecutionId,
+                        exception.getNumeroNomina(),
+                        errorPolicyService.buildControlErrorMessage(exception));
+            } catch (RuntimeException controlException) {
+                throw new ArtikosIntegrationException(
+                        IntegrationErrorType.ORACLE_CONTROL_ERROR,
+                        exception.getProfile(),
+                        exception.getNumeroNomina(),
+                        "CONTROL_NOMINA",
+                        controlException.getMessage(),
+                        controlException);
+            }
+        }
+    }
+
+    private String currentOperation() {
+        return LoggingContext.snapshot().get("operation");
     }
 
     private ResultadoNomina processLocally(ArtikosFetchedNomina item) {

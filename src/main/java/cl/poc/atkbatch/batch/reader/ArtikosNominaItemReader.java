@@ -4,9 +4,12 @@ import cl.poc.atkbatch.domain.Nomina;
 import cl.poc.atkbatch.domain.artikos.ArtikosOperation;
 import cl.poc.atkbatch.domain.artikos.ArtikosFetchedNomina;
 import cl.poc.atkbatch.domain.artikos.ArtikosProfileType;
+import cl.poc.atkbatch.domain.error.IntegrationErrorType;
 import cl.poc.atkbatch.service.artikos.ArtikosSoapClient;
+import cl.poc.atkbatch.service.artikos.ArtikosSoapClientException;
 import cl.poc.atkbatch.service.artikos.ArtikosSoapResponseParser;
 import cl.poc.atkbatch.shared.exception.ArtikosIntegrationException;
+import cl.poc.atkbatch.shared.exception.NominaXmlParsingException;
 import cl.poc.atkbatch.shared.logging.LoggingContext;
 import java.util.Optional;
 import org.slf4j.Logger;
@@ -80,8 +83,30 @@ public class ArtikosNominaItemReader implements ItemReader<ArtikosFetchedNomina>
                     nomina.cabecera().cantidadDocumentos(),
                     rawXml,
                     dryRun);
+        } catch (ArtikosSoapClientException exception) {
+            throw new ArtikosIntegrationException(
+                    IntegrationErrorType.ARTIKOS_FETCH_ERROR,
+                    profile.name(),
+                    null,
+                    ArtikosOperation.NOMFACTERP.name(),
+                    exception.getMessage(),
+                    exception);
+        } catch (NominaXmlParsingException exception) {
+            throw new ArtikosIntegrationException(
+                    IntegrationErrorType.XML_PARSING_ERROR,
+                    profile.name(),
+                    null,
+                    ArtikosOperation.NOMFACTERP.name(),
+                    exception.getMessage(),
+                    exception);
         } catch (RuntimeException exception) {
-            throw new ArtikosIntegrationException("No fue posible consultar nomina en Artikos QA", exception);
+            throw new ArtikosIntegrationException(
+                    IntegrationErrorType.ARTIKOS_FETCH_ERROR,
+                    profile.name(),
+                    null,
+                    ArtikosOperation.NOMFACTERP.name(),
+                    "No fue posible consultar nomina en Artikos QA",
+                    exception);
         } finally {
             LoggingContext.clearOperation();
             LoggingContext.clearNomina();

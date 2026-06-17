@@ -7,8 +7,10 @@ public record BatchStatusResponse(
         String jobName,
         String status,
         String exitStatus,
+        String exitDescription,
         LocalDateTime createTime,
         LocalDateTime startTime,
         LocalDateTime endTime,
+        String error,
         String message) {
 }
