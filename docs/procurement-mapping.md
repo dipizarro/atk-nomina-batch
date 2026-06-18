@@ -2,7 +2,9 @@
 
 ## Alcance Sprint 9.0
 
-Este sprint implementa el mapper Artikos -> Procurement CMP. No consume el endpoint real de Procurement.
+Sprint 9.0 implementa el mapper Artikos -> Procurement CMP.
+
+Sprint 9.1 agrega el cliente HTTP configurable para consumir Procurement, pero todavia no lo integra al flujo batch.
 
 Endpoint objetivo futuro:
 
@@ -128,3 +130,28 @@ Si falta una property obligatoria, el mapper lanza `ProcurementMappingException`
 - Definir idempotencia para documentos enviados a Procurement.
 - Definir estrategia de reintentos y errores al consumir `POST /api/v1/document`.
 - Evaluar endpoint bulk en sprint posterior.
+
+## HTTP client
+
+El cliente HTTP Procurement vive en `ProcurementClient` y usa `RestClient`.
+
+Properties:
+
+```properties
+procurement.client.enabled=false
+procurement.client.base-url=
+procurement.client.document-path=/api/v1/document
+procurement.client.connect-timeout-ms=5000
+procurement.client.read-timeout-ms=30000
+```
+
+Reglas iniciales:
+
+- `enabled=false`: el cliente falla de forma controlada al intentar usarlo.
+- HTTP `2xx` con `statusCode=0`: resultado exitoso.
+- HTTP `2xx` con `statusCode!=0`: NOK funcional.
+- HTTP `4xx` con body parseable: NOK funcional.
+- HTTP `5xx`: error tecnico.
+- Timeout/conexion: error tecnico.
+
+El cliente no loguea el JSON completo en `INFO`. Request y response completos quedan reservados para `DEBUG`.

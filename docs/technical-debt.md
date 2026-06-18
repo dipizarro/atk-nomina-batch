@@ -77,12 +77,16 @@ Abordado parcialmente en Sprint 9.0:
 - DTOs Procurement serializan con nombres JSON esperados.
 - Campos ASI iniciales quedan configurables por properties.
 - `HNR` queda fuera de alcance.
+- Cliente HTTP Procurement implementado en Sprint 9.1 para `POST /api/v1/document`.
+- Timeouts y URL Procurement quedan configurables.
+- `statusCode=0` se interpreta como OK y `statusCode!=0` como NOK funcional.
 
 Pendiente:
 
-- Implementar integracion HTTP real con Procurement `POST /api/v1/document`.
+- Integrar Procurement al processor batch.
 - Definir idempotencia de documento Procurement.
 - Evaluar endpoint bulk futuro.
+- Definir retry Procurement si aplica.
 - Obtener desde ASI los campos que hoy quedan configurables.
 - Validar estructura final de `CMP_DOCUMT_DET_RUT`.
 - Validar valores definitivos para `COD_CONTBL`, `COD_TIP_UNID`, `GRL_COD_ITEM` y `NUM_PERIODO`.
