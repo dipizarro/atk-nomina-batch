@@ -71,7 +71,22 @@ Pendiente:
 
 ## Integracion Procurement
 
-La integracion posterior con Procurement queda pendiente para el final del roadmap. Debe definirse contrato, responsabilidades, estados funcionales, reintentos y manejo de errores antes de conectar el flujo productivo.
+Abordado parcialmente en Sprint 9.0:
+
+- Mapper Artikos -> Procurement CMP implementado.
+- DTOs Procurement serializan con nombres JSON esperados.
+- Campos ASI iniciales quedan configurables por properties.
+- `HNR` queda fuera de alcance.
+
+Pendiente:
+
+- Implementar integracion HTTP real con Procurement `POST /api/v1/document`.
+- Definir idempotencia de documento Procurement.
+- Evaluar endpoint bulk futuro.
+- Obtener desde ASI los campos que hoy quedan configurables.
+- Validar estructura final de `CMP_DOCUMT_DET_RUT`.
+- Validar valores definitivos para `COD_CONTBL`, `COD_TIP_UNID`, `GRL_COD_ITEM` y `NUM_PERIODO`.
+- Definir estados funcionales, reintentos y manejo de errores al conectar Procurement al flujo batch.
 
 ## Contrato REST y errores
 

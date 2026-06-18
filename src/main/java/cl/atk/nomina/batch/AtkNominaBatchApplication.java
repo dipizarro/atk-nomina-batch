@@ -6,6 +6,7 @@ import cl.atk.nomina.batch.config.ArtikosRetryProperties;
 import cl.atk.nomina.batch.config.AppConfigValidationProperties;
 import cl.atk.nomina.batch.config.AppDiagnosticsProperties;
 import cl.atk.nomina.batch.config.BatchExecutionProperties;
+import cl.atk.nomina.batch.procurement.config.ProcurementMappingProperties;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -17,7 +18,8 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
         ArtikosRetryProperties.class,
         AppDiagnosticsProperties.class,
         AppConfigValidationProperties.class,
-        BatchExecutionProperties.class
+        BatchExecutionProperties.class,
+        ProcurementMappingProperties.class
 })
 public class AtkNominaBatchApplication {
 

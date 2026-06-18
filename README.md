@@ -135,6 +135,18 @@ app.admin.enabled=false
 
 La matriz de exposicion esta documentada en `docs/gateway-endpoints.md`.
 
+## Procurement integration status
+
+Sprint 9.0 implementa el mapper JSON Artikos -> Procurement `CMP` para el endpoint objetivo futuro:
+
+```http
+POST /api/v1/document
+```
+
+La aplicacion todavia no consume Procurement ni consulta ASI. El mapeo actual construye el request CMP desde `DocumentoContable`, genera una linea por distribucion Artikos y deja `HNR` fuera de alcance. La llamada HTTP real se implementara en un sprint posterior.
+
+El detalle esta documentado en `docs/procurement-mapping.md`.
+
 ## Oracle
 
 Los scripts Oracle necesarios estan en:
@@ -248,6 +260,7 @@ El servicio nacio como una POC para validar integracion SOAP Artikos, procesamie
 - Consultas SQL de soporte: `docs/sql-queries.md`
 - Guia de soporte: `docs/support-guide.md`
 - Matriz gateway: `docs/gateway-endpoints.md`
+- Mapeo Procurement CMP: `docs/procurement-mapping.md`
 - Logging: `docs/logging.md`
 - Hardening operativo: `docs/operational-hardening.md`
 - Manejo de errores: `docs/error-handling.md`
