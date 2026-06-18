@@ -3,6 +3,7 @@ package cl.atk.nomina.batch.service;
 import cl.atk.nomina.batch.api.dto.StartBatchResponse;
 import cl.atk.nomina.batch.api.dto.StartBatchRequest;
 import cl.atk.nomina.batch.batch.config.NominaBatchJobConfig;
+import cl.atk.nomina.batch.config.BatchExecutionProperties;
 import cl.atk.nomina.batch.domain.artikos.ArtikosProfileType;
 import java.util.concurrent.atomic.AtomicLong;
 import org.springframework.batch.core.Job;
@@ -11,7 +12,6 @@ import org.springframework.batch.core.JobParameters;
 import org.springframework.batch.core.JobParametersBuilder;
 import org.springframework.batch.core.launch.JobLauncher;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.beans.factory.annotation.Value;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -23,16 +23,19 @@ public class BatchLauncherService {
 
     private final JobLauncher jobLauncher;
     private final Job nominaDocumentosContablesJob;
-    private final int defaultMaxNominas;
+    private final BatchExecutionProperties batchExecutionProperties;
+    private final BatchConcurrencyService batchConcurrencyService;
     private final AtomicLong runIdSequence = new AtomicLong(System.currentTimeMillis());
 
     public BatchLauncherService(
             @Qualifier("asyncJobLauncher") JobLauncher jobLauncher,
             Job nominaDocumentosContablesJob,
-            @Value("${atk.batch.max-nominas:1000}") int defaultMaxNominas) {
+            BatchExecutionProperties batchExecutionProperties,
+            BatchConcurrencyService batchConcurrencyService) {
         this.jobLauncher = jobLauncher;
         this.nominaDocumentosContablesJob = nominaDocumentosContablesJob;
-        this.defaultMaxNominas = defaultMaxNominas;
+        this.batchExecutionProperties = batchExecutionProperties;
+        this.batchConcurrencyService = batchConcurrencyService;
     }
 
     public StartBatchResponse startNominaBatch(StartBatchRequest request) {
@@ -41,8 +44,13 @@ public class BatchLauncherService {
                     ? new StartBatchRequest("GENERALES", null, true)
                     : request;
             ArtikosProfileType profileType = ArtikosProfileType.from(effectiveRequest.profile());
-            int maxNominas = effectiveRequest.resolvedMaxNominas(defaultMaxNominas);
+            int maxNominas = effectiveRequest.resolvedMaxNominas(
+                    batchExecutionProperties.resolvedDefaultMaxNominas());
+            validateMaxNominas(maxNominas);
             boolean dryRun = effectiveRequest.resolvedDryRun();
+            batchConcurrencyService.assertNoRunningExecutionForProfile(
+                    NominaBatchJobConfig.JOB_NAME,
+                    profileType.name());
             Long runId = nextRunId();
             JobParameters parameters = new JobParametersBuilder()
                     .addString("profile", profileType.name())
@@ -74,5 +82,12 @@ public class BatchLauncherService {
 
     private Long nextRunId() {
         return runIdSequence.updateAndGet(previous -> Math.max(System.currentTimeMillis(), previous + 1));
+    }
+
+    private void validateMaxNominas(int maxNominas) {
+        int maxAllowed = batchExecutionProperties.resolvedMaxNominasPerRun();
+        if (maxNominas > maxAllowed) {
+            throw new IllegalArgumentException("maxNominas exceeds configured limit");
+        }
     }
 }

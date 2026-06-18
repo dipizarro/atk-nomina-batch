@@ -12,7 +12,7 @@ Resuelto parcialmente en Sprint 8.2:
 Pendiente:
 
 - Eliminar definitivamente endpoints diagnosticos si el proyecto no los requiere.
-- Proteger endpoint administrativo de purga metadata con autenticacion y autorizacion.
+- El endpoint administrativo de purga metadata ya queda condicionado por `app.admin.enabled=true`, pero falta protegerlo con autenticacion y autorizacion corporativa.
 - Definir mecanismo de autenticacion/autorizacion para endpoints productivos.
 - Definir si `POST /api/v1/nominas/batch/start` debe exigir siempre body con `profile` o mantener compatibilidad de dry-run sin body.
 

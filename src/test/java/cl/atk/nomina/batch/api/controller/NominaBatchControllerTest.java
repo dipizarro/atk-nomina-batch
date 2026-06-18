@@ -9,9 +9,13 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.when;
 
 import cl.atk.nomina.batch.domain.artikos.ArtikosOperationConfig;
+import cl.atk.nomina.batch.service.BatchConcurrencyService;
+import cl.atk.nomina.batch.shared.exception.BatchConcurrencyException;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.BeforeEach;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -19,6 +23,7 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.core.io.ClassPathResource;
+import org.springframework.http.MediaType;
 import org.springframework.util.StreamUtils;
 import cl.atk.nomina.batch.service.artikos.ArtikosSoapClient;
 import java.nio.charset.StandardCharsets;
@@ -34,6 +39,9 @@ class NominaBatchControllerTest {
 
     @MockBean
     private ArtikosSoapClient soapClient;
+
+    @MockBean
+    private BatchConcurrencyService batchConcurrencyService;
 
     @BeforeEach
     void setUp() throws Exception {
@@ -52,7 +60,7 @@ class NominaBatchControllerTest {
                 .andExpect(jsonPath("$.status", anyOf(is("STARTING"), is("STARTED"))))
                 .andExpect(jsonPath("$.message", is("Batch iniciado correctamente")))
                 .andExpect(jsonPath("$.profile", is("GENERALES")))
-                .andExpect(jsonPath("$.maxNominas", is(1000)))
+                .andExpect(jsonPath("$.maxNominas", is(50)))
                 .andExpect(jsonPath("$.dryRun", is(true)))
                 .andReturn();
 
@@ -124,6 +132,42 @@ class NominaBatchControllerTest {
                 .andExpect(jsonPath("$.totalOk").value(1))
                 .andExpect(jsonPath("$.totalNok").value(0))
                 .andExpect(jsonPath("$.nomfactresXml", org.hamcrest.Matchers.containsString("NOMFACTRES")));
+    }
+
+    @Test
+    void startBatchRejectsMaxNominasOverConfiguredLimit() throws Exception {
+        mockMvc.perform(post("/api/v1/nominas/batch/start")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "profile": "VIDA",
+                                  "maxNominas": 51,
+                                  "dryRun": true
+                                }
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(result -> assertThat(result.getResponse().getContentAsString())
+                        .contains("maxNominas exceeds configured limit"));
+    }
+
+    @Test
+    void startBatchReturnsConflictWhenProfileAlreadyRunning() throws Exception {
+        doThrow(new BatchConcurrencyException("Ya existe una ejecucion batch activa para el perfil VIDA"))
+                .when(batchConcurrencyService)
+                .assertNoRunningExecutionForProfile(eq("nominaDocumentosContablesJob"), eq("VIDA"));
+
+        mockMvc.perform(post("/api/v1/nominas/batch/start")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "profile": "VIDA",
+                                  "maxNominas": 1,
+                                  "dryRun": true
+                                }
+                                """))
+                .andExpect(status().isConflict())
+                .andExpect(result -> assertThat(result.getResponse().getContentAsString())
+                        .contains("perfil VIDA"));
     }
 
     private String extractJobExecutionId(MvcResult result) throws Exception {

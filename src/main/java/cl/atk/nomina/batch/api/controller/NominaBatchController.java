@@ -8,10 +8,12 @@ import cl.atk.nomina.batch.api.dto.StartBatchResponse;
 import cl.atk.nomina.batch.service.BatchLauncherService;
 import cl.atk.nomina.batch.service.BatchStatusService;
 import cl.atk.nomina.batch.service.BatchSummaryService;
+import cl.atk.nomina.batch.shared.exception.BatchConcurrencyException;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -70,5 +72,10 @@ public class NominaBatchController {
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public String handleBadRequest(IllegalArgumentException exception) {
         return exception.getMessage();
+    }
+
+    @ExceptionHandler(BatchConcurrencyException.class)
+    public ResponseEntity<String> handleConflict(BatchConcurrencyException exception) {
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(exception.getMessage());
     }
 }

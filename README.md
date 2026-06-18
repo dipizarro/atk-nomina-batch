@@ -60,13 +60,20 @@ Los endpoints temporales de diagnostico Artikos y CONTROL_NOMINA viven bajo `/ap
 La configuracion base vive en `src/main/resources/application.properties`. La configuracion local sensible vive en `src/main/resources/application-local.properties`, que esta ignorado por Git.
 
 - `atk.batch.simulation-nominas=1000`
-- `atk.batch.max-nominas=1000`
+- `atk.batch.default-max-nominas=50`
+- `atk.batch.max-nominas-per-run=50`
 - `atk.batch.simulation-iterations=100`
 - `atk.batch.chunk-size=20`
 - `atk.batch.real.chunk-size=1`
 - `atk.batch.sample-file=classpath:samples/ZSVIDA_Nom15960.xml`
 - `app.diagnostics.enabled=false`
+- `app.admin.enabled=false`
 - `app.config.validation.strict=false`
+- `artikos.http.connect-timeout-ms=5000`
+- `artikos.http.read-timeout-ms=30000`
+- `artikos.retry.enabled=true`
+- `artikos.retry.max-attempts=3`
+- `artikos.retry.backoff-ms=1000`
 
 En Oracle, Spring Batch no crea su metadata automaticamente. La aplicacion usa `spring.batch.jdbc.initialize-schema=never`, por lo que los scripts SQL deben ejecutarse manualmente antes de disparar el endpoint de inicio.
 
@@ -150,6 +157,12 @@ Reglas principales:
 
 Ejecutar con `dryRun=false` elimina registros reales de `BATCH_*`; en produccion este endpoint debe protegerse con autenticacion y autorizacion.
 
+El endpoint de purga solo se carga si:
+
+```properties
+app.admin.enabled=true
+```
+
 ## Operational logging
 
 Los logs incluyen contexto MDC para trazabilidad operacional:
@@ -177,6 +190,12 @@ Resumen operativo:
 
 Los endpoints de estado/resumen devuelven errores compactados; el stacktrace completo queda en logs y metadata Spring Batch.
 
+## Operational hardening
+
+Los controles operativos estan documentados en `docs/operational-hardening.md`.
+
+Incluyen timeouts SOAP, retry tecnico, errores no reintentables, limite `maxNominas`, concurrencia por perfil, health checks y proteccion por property del endpoint administrativo.
+
 ## Architecture and package conventions
 
 La revision estructural esta documentada en `docs/architecture-review.md`.
@@ -193,6 +212,7 @@ El servicio nacio como una POC para validar integracion SOAP Artikos, procesamie
 - Flujo batch: `docs/batch-flow.md`
 - Endpoints: `docs/endpoints.md`
 - Logging: `docs/logging.md`
+- Hardening operativo: `docs/operational-hardening.md`
 - Manejo de errores: `docs/error-handling.md`
 - Secretos y ambientes: `docs/secrets.md`
 - Revision de arquitectura: `docs/architecture-review.md`
@@ -208,5 +228,5 @@ mvn clean test
 ## Commit sugerido
 
 ```bash
-git commit -m "chore: review architecture and align project structure"
+git commit -m "feat: add operational hardening controls"
 ```

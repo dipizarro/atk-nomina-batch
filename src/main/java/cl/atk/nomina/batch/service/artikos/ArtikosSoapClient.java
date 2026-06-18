@@ -1,6 +1,8 @@
 package cl.atk.nomina.batch.service.artikos;
 
 import cl.atk.nomina.batch.config.ArtikosProperties;
+import cl.atk.nomina.batch.config.ArtikosHttpProperties;
+import cl.atk.nomina.batch.config.ArtikosRetryProperties;
 import cl.atk.nomina.batch.domain.ResultadoNomina;
 import cl.atk.nomina.batch.domain.artikos.ArtikosOperation;
 import cl.atk.nomina.batch.domain.artikos.ArtikosOperationConfig;
@@ -11,11 +13,15 @@ import cl.atk.nomina.batch.shared.logging.LoggingContext;
 import java.io.IOException;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
+import java.util.function.Supplier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.HttpStatusCode;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StreamUtils;
 import org.springframework.util.StringUtils;
@@ -34,21 +40,45 @@ public class ArtikosSoapClient {
     private final ArtikosConfirmacionSoapRequestBuilder confirmacionRequestBuilder;
     private final ArtikosResultadoSoapRequestBuilder resultadoRequestBuilder;
     private final NominaResultXmlService nominaResultXmlService;
+    private final ArtikosRetryProperties retryProperties;
     private final RestClient restClient;
 
+    @Autowired
     public ArtikosSoapClient(
             ArtikosProperties artikosProperties,
             ArtikosNominaSoapRequestBuilder requestBuilder,
             ArtikosConfirmacionSoapRequestBuilder confirmacionRequestBuilder,
             ArtikosResultadoSoapRequestBuilder resultadoRequestBuilder,
             NominaResultXmlService nominaResultXmlService,
+            ArtikosHttpProperties httpProperties,
+            ArtikosRetryProperties retryProperties,
             RestClient.Builder restClientBuilder) {
         this.artikosProperties = artikosProperties;
         this.requestBuilder = requestBuilder;
         this.confirmacionRequestBuilder = confirmacionRequestBuilder;
         this.resultadoRequestBuilder = resultadoRequestBuilder;
         this.nominaResultXmlService = nominaResultXmlService;
-        this.restClient = restClientBuilder.build();
+        this.retryProperties = retryProperties;
+        this.restClient = restClientBuilder
+                .requestFactory(requestFactory(httpProperties))
+                .build();
+    }
+
+    ArtikosSoapClient(
+            ArtikosProperties artikosProperties,
+            ArtikosNominaSoapRequestBuilder requestBuilder,
+            ArtikosConfirmacionSoapRequestBuilder confirmacionRequestBuilder,
+            ArtikosResultadoSoapRequestBuilder resultadoRequestBuilder,
+            NominaResultXmlService nominaResultXmlService,
+            ArtikosRetryProperties retryProperties,
+            RestClient restClient) {
+        this.artikosProperties = artikosProperties;
+        this.requestBuilder = requestBuilder;
+        this.confirmacionRequestBuilder = confirmacionRequestBuilder;
+        this.resultadoRequestBuilder = resultadoRequestBuilder;
+        this.nominaResultXmlService = nominaResultXmlService;
+        this.retryProperties = retryProperties;
+        this.restClient = restClient;
     }
 
     public String fetchNominaRawXml(ArtikosProfileType profileType) {
@@ -215,7 +245,7 @@ public class ArtikosSoapClient {
             ArtikosProfileType profileType,
             Long numeroNomina) {
         long startedAt = System.nanoTime();
-        return restClient.post()
+        return executeWithRetry(operation, profileType, numeroNomina, () -> restClient.post()
                 .uri(URI.create(endpoint))
                 .contentType(MediaType.parseMediaType("text/xml; charset=utf-8"))
                 .headers(headers -> applySoapAction(headers, soapAction))
@@ -231,10 +261,84 @@ public class ArtikosSoapClient {
                                         + "elapsedMs={} body={}",
                                 operation, profileType, numeroNomina, statusCode, elapsedMs(startedAt), safeBody);
                         throw new ArtikosSoapClientException(
-                                "Artikos QA respondio HTTP " + statusCode.value() + ": " + safeBody);
+                                "Artikos QA respondio HTTP " + statusCode.value() + ": " + safeBody,
+                                null,
+                                statusCode.is5xxServerError());
                     }
                     return responseBody;
-                });
+                }));
+    }
+
+    private String executeWithRetry(
+            String operation,
+            ArtikosProfileType profileType,
+            Long numeroNomina,
+            Supplier<String> action) {
+        int maxAttempts = retryProperties.resolvedMaxAttempts();
+        RuntimeException lastException = null;
+        for (int attempt = 1; attempt <= maxAttempts; attempt++) {
+            long startedAt = System.nanoTime();
+            try {
+                return action.get();
+            } catch (ArtikosSoapClientException exception) {
+                lastException = exception;
+                if (!exception.isRetryable() || attempt >= maxAttempts) {
+                    throw exception;
+                }
+                logRetry(operation, profileType, numeroNomina, attempt, maxAttempts, startedAt, exception);
+                backoff();
+            } catch (RestClientException exception) {
+                lastException = exception;
+                if (attempt >= maxAttempts) {
+                    throw exception;
+                }
+                logRetry(operation, profileType, numeroNomina, attempt, maxAttempts, startedAt, exception);
+                backoff();
+            }
+        }
+        throw lastException == null
+                ? new ArtikosSoapClientException("No fue posible ejecutar llamada SOAP Artikos")
+                : lastException;
+    }
+
+    private void logRetry(
+            String operation,
+            ArtikosProfileType profileType,
+            Long numeroNomina,
+            int attempt,
+            int maxAttempts,
+            long startedAt,
+            RuntimeException exception) {
+        LOGGER.warn("Retrying Artikos SOAP technical error operation={} profile={} numeroNomina={} attempt={} "
+                        + "maxAttempts={} elapsedMs={} exceptionClass={} exceptionMessage={}",
+                operation,
+                profileType,
+                numeroNomina,
+                attempt,
+                maxAttempts,
+                elapsedMs(startedAt),
+                exception.getClass().getSimpleName(),
+                exception.getMessage());
+    }
+
+    private void backoff() {
+        long backoffMs = retryProperties.resolvedBackoffMs();
+        if (backoffMs <= 0) {
+            return;
+        }
+        try {
+            Thread.sleep(backoffMs);
+        } catch (InterruptedException exception) {
+            Thread.currentThread().interrupt();
+            throw new ArtikosSoapClientException("Retry Artikos interrumpido", exception);
+        }
+    }
+
+    private SimpleClientHttpRequestFactory requestFactory(ArtikosHttpProperties httpProperties) {
+        SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
+        requestFactory.setConnectTimeout(Duration.ofMillis(httpProperties.resolvedConnectTimeoutMs()));
+        requestFactory.setReadTimeout(Duration.ofMillis(httpProperties.resolvedReadTimeoutMs()));
+        return requestFactory;
     }
 
     private void applySoapAction(HttpHeaders headers, String soapAction) {

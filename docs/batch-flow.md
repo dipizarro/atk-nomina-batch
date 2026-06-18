@@ -46,7 +46,7 @@ La respuesta es inmediata e incluye `jobExecutionId`, `jobName`, `status`, `prof
 
 La condicion principal de termino es la respuesta funcional de Artikos indicando que no hay mas nominas disponibles. El limite `maxNominas` solo protege contra ejecuciones demasiado largas o loops inesperados.
 
-La propiedad `atk.batch.max-nominas` define el valor por defecto cuando el request no lo informa. Puede sobreescribirse por request para pruebas o ventanas operativas acotadas.
+La propiedad `atk.batch.default-max-nominas` define el valor por defecto cuando el request no lo informa. La propiedad `atk.batch.max-nominas-per-run` define el maximo permitido por ejecucion. Puede sobreescribirse por request para pruebas o ventanas operativas acotadas, siempre dentro del limite configurado.
 
 ## Unidad de procesamiento
 

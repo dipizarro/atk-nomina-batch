@@ -13,11 +13,11 @@ Estos endpoints forman parte del contrato REST productivo de la aplicacion.
 | `GET` | `/api/v1/nominas/batch/{jobExecutionId}/results/{numeroNomina}` | Consulta resultado funcional por nomina |
 | `GET` | `/api/v1/control-nomina/jobs/{jobExecutionId}` | Consulta registros `CONTROL_NOMINA` por job |
 | `GET` | `/api/v1/control-nomina/jobs/{jobExecutionId}/nominas/{numeroNomina}` | Consulta un registro `CONTROL_NOMINA` especifico |
-| `POST` | `/api/v1/admin/batch-metadata/purge` | Simula o ejecuta purga controlada de metadata `BATCH_*` |
+| `POST` | `/api/v1/admin/batch-metadata/purge` | Simula o ejecuta purga controlada de metadata `BATCH_*`; requiere `app.admin.enabled=true` |
 | `GET` | `/actuator/health` | Health Spring Actuator |
 | `GET` | `/swagger-ui.html` | Documentacion OpenAPI |
 
-El endpoint de purga debe protegerse con autenticacion y autorizacion antes de uso productivo.
+El endpoint de purga solo se carga si `app.admin.enabled=true`. Ademas, debe protegerse con autenticacion y autorizacion antes de uso productivo.
 
 ## Diagnostic Endpoints
 
