@@ -60,6 +60,7 @@ Los endpoints temporales de diagnostico Artikos y CONTROL_NOMINA viven bajo `/ap
 La configuracion base vive en `src/main/resources/application.properties`. La configuracion local sensible vive en `src/main/resources/application-local.properties`, que esta ignorado por Git.
 
 - `atk.batch.simulation-nominas=1000`
+- `atk.batch.max-nominas=1000`
 - `atk.batch.simulation-iterations=100`
 - `atk.batch.chunk-size=20`
 - `atk.batch.real.chunk-size=1`

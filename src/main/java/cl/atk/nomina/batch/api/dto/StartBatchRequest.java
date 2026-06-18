@@ -8,8 +8,8 @@ public record StartBatchRequest(
         @Min(1) Integer maxNominas,
         Boolean dryRun) {
 
-    public int resolvedMaxNominas() {
-        return maxNominas == null ? 1 : maxNominas;
+    public int resolvedMaxNominas(int defaultMaxNominas) {
+        return maxNominas == null ? defaultMaxNominas : maxNominas;
     }
 
     public boolean resolvedDryRun() {

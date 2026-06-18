@@ -11,6 +11,7 @@ import org.springframework.batch.core.JobParameters;
 import org.springframework.batch.core.JobParametersBuilder;
 import org.springframework.batch.core.launch.JobLauncher;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.annotation.Value;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -22,20 +23,25 @@ public class BatchLauncherService {
 
     private final JobLauncher jobLauncher;
     private final Job nominaDocumentosContablesJob;
+    private final int defaultMaxNominas;
     private final AtomicLong runIdSequence = new AtomicLong(System.currentTimeMillis());
 
-    public BatchLauncherService(@Qualifier("asyncJobLauncher") JobLauncher jobLauncher, Job nominaDocumentosContablesJob) {
+    public BatchLauncherService(
+            @Qualifier("asyncJobLauncher") JobLauncher jobLauncher,
+            Job nominaDocumentosContablesJob,
+            @Value("${atk.batch.max-nominas:1000}") int defaultMaxNominas) {
         this.jobLauncher = jobLauncher;
         this.nominaDocumentosContablesJob = nominaDocumentosContablesJob;
+        this.defaultMaxNominas = defaultMaxNominas;
     }
 
     public StartBatchResponse startNominaBatch(StartBatchRequest request) {
         try {
             StartBatchRequest effectiveRequest = request == null
-                    ? new StartBatchRequest("GENERALES", 1, true)
+                    ? new StartBatchRequest("GENERALES", null, true)
                     : request;
             ArtikosProfileType profileType = ArtikosProfileType.from(effectiveRequest.profile());
-            int maxNominas = effectiveRequest.resolvedMaxNominas();
+            int maxNominas = effectiveRequest.resolvedMaxNominas(defaultMaxNominas);
             boolean dryRun = effectiveRequest.resolvedDryRun();
             Long runId = nextRunId();
             JobParameters parameters = new JobParametersBuilder()

@@ -7,6 +7,7 @@ La aplicacion distingue errores tecnicos de integracion, rechazos funcionales de
 | Caso | Estado job | CONTROL_NOMINA | Accion |
 | --- | --- | --- | --- |
 | No hay nominas | COMPLETED | no aplica | Termina normal |
+| Se alcanza maxNominas | COMPLETED | filas procesadas hasta el limite | Termina normal con log de limite operacional |
 | Fetch SOAP error | FAILED | no aplica | Detener |
 | Confirm error | FAILED | ERROR | Detener |
 | Documento NOK | COMPLETED | NOK | Informar resultado |
@@ -25,6 +26,12 @@ Los errores de integracion se clasifican con `IntegrationErrorType`:
 - `NOMINA_RESULT_ERROR`: Artikos rechaza `NOMFACTRES` o falla su envio.
 - `ORACLE_CONTROL_ERROR`: falla persistiendo estado funcional en `CONTROL_NOMINA`.
 - `UNKNOWN_ERROR`: fallback para errores no clasificados.
+
+## Termino controlado
+
+El job termina `COMPLETED` cuando Artikos responde que no hay mas nominas para procesar. Tambien termina `COMPLETED` si se alcanza `maxNominas`, porque ese parametro es un limite operativo de seguridad y no un error funcional.
+
+El job termina `FAILED` ante errores tecnicos de fetch, rechazo de confirmacion, rechazo o falla de `NOMFACTRES`, y errores Oracle que impiden registrar o actualizar `CONTROL_NOMINA`.
 
 ## Respuestas REST
 

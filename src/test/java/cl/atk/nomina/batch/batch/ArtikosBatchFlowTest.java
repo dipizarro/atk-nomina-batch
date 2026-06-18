@@ -6,6 +6,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -13,7 +14,11 @@ import cl.atk.nomina.batch.batch.processor.ArtikosNominaItemProcessor;
 import cl.atk.nomina.batch.batch.processor.NominaDocumentoItemProcessor;
 import cl.atk.nomina.batch.batch.reader.ArtikosNominaItemReader;
 import cl.atk.nomina.batch.batch.writer.ArtikosNominaResultItemWriter;
+import cl.atk.nomina.batch.domain.Conciliacion;
+import cl.atk.nomina.batch.domain.DistribucionContable;
+import cl.atk.nomina.batch.domain.DocumentoContable;
 import cl.atk.nomina.batch.domain.Nomina;
+import cl.atk.nomina.batch.domain.NominaHeader;
 import cl.atk.nomina.batch.domain.ResultadoNomina;
 import cl.atk.nomina.batch.domain.artikos.ArtikosFetchedNomina;
 import cl.atk.nomina.batch.domain.artikos.ArtikosGenericResponse;
@@ -78,6 +83,24 @@ class ArtikosBatchFlowTest {
     }
 
     @Test
+    void readerReadsSeveralNominasUntilArtikosHasNoNominas() throws Exception {
+        ArtikosSoapClient soapClient = mock(ArtikosSoapClient.class);
+        when(soapClient.fetchNominaRawXml(ArtikosProfileType.VIDA))
+                .thenReturn(sampleNominaXml(), sampleNominaXml(), noNominasXml());
+        ArtikosNominaItemReader reader = new ArtikosNominaItemReader(
+                soapClient,
+                new ArtikosSoapResponseParser(nominaXmlParserService),
+                "VIDA",
+                10L,
+                "true");
+
+        assertThat(reader.read()).isNotNull();
+        assertThat(reader.read()).isNotNull();
+        assertThat(reader.read()).isNull();
+        verify(soapClient, times(3)).fetchNominaRawXml(ArtikosProfileType.VIDA);
+    }
+
+    @Test
     void readerRespectsMaxNominas() throws Exception {
         ArtikosSoapClient soapClient = mock(ArtikosSoapClient.class);
         when(soapClient.fetchNominaRawXml(ArtikosProfileType.VIDA)).thenReturn(sampleNominaXml());
@@ -91,6 +114,23 @@ class ArtikosBatchFlowTest {
         assertThat(reader.read()).isNotNull();
         assertThat(reader.read()).isNull();
         verify(soapClient).fetchNominaRawXml(ArtikosProfileType.VIDA);
+    }
+
+    @Test
+    void readerStopsAtMaxNominasEvenWhenArtikosStillHasNominas() throws Exception {
+        ArtikosSoapClient soapClient = mock(ArtikosSoapClient.class);
+        when(soapClient.fetchNominaRawXml(ArtikosProfileType.VIDA)).thenReturn(sampleNominaXml());
+        ArtikosNominaItemReader reader = new ArtikosNominaItemReader(
+                soapClient,
+                new ArtikosSoapResponseParser(nominaXmlParserService),
+                "VIDA",
+                2L,
+                "true");
+
+        assertThat(reader.read()).isNotNull();
+        assertThat(reader.read()).isNotNull();
+        assertThat(reader.read()).isNull();
+        verify(soapClient, times(2)).fetchNominaRawXml(ArtikosProfileType.VIDA);
     }
 
     @Test
@@ -185,6 +225,26 @@ class ArtikosBatchFlowTest {
         assertThat(result.totalNok()).isEqualTo(1);
         verify(controlNominaService, never()).markError(any(), any(), any());
     }
+
+    @Test
+    void processorCalculatesTotalsFromVariableNominaContent() {
+        ControlNominaService controlNominaService = mock(ControlNominaService.class);
+        ArtikosSoapClient soapClient = mock(ArtikosSoapClient.class);
+        ArtikosGenericSoapResponseParser genericParser = mock(ArtikosGenericSoapResponseParser.class);
+        when(soapClient.resultadoNominaConfig(ArtikosProfileType.VIDA)).thenReturn(resultadoOperationConfig());
+        ArtikosNominaItemProcessor processor = processor(controlNominaService, soapClient, genericParser, "true");
+
+        ResultadoNomina result = processor.process(fetchedVariableNomina(true));
+
+        assertThat(result.totalDocuments()).isEqualTo(2);
+        assertThat(result.totalOk()).isEqualTo(1);
+        assertThat(result.totalNok()).isEqualTo(1);
+        assertThat(result.totalConciliaciones()).isEqualTo(3);
+        assertThat(result.totalDistribuciones()).isEqualTo(4);
+        assertThat(result.status()).isEqualTo("NOK");
+        assertThat(result.documentos()).hasSize(2);
+    }
+
 
     @Test
     void writerSendsNomfactresWhenDryRunIsFalse() {
@@ -328,6 +388,101 @@ class ArtikosBatchFlowTest {
                 invalidNomina.cabecera().cantidadDocumentos(),
                 "<raw/>",
                 dryRun);
+    }
+
+    private ArtikosFetchedNomina fetchedVariableNomina(boolean dryRun) {
+        Nomina nomina = nominaXmlParserService.parseSampleFile();
+        DocumentoContable firstDocument = nomina.documentos().get(0);
+        DocumentoContable secondDocument = documentWith(
+                firstDocument,
+                2,
+                3151101L,
+                BigDecimal.ZERO,
+                List.of(conciliacionWithDistributions(2)));
+        NominaHeader header = new NominaHeader(
+                nomina.cabecera().msgFrom(),
+                nomina.cabecera().msgTo(),
+                nomina.cabecera().msgDate(),
+                nomina.cabecera().msgSystem(),
+                nomina.cabecera().msgCode(),
+                nomina.cabecera().msgVersion(),
+                nomina.cabecera().numeroNomina(),
+                nomina.cabecera().tipoNomina(),
+                nomina.cabecera().fechaNomina(),
+                2);
+        Nomina variableNomina = new Nomina(
+                nomina.msgCode(),
+                nomina.msgStatus(),
+                nomina.msgFromAddress(),
+                header,
+                List.of(firstDocument, secondDocument));
+        return new ArtikosFetchedNomina(
+                ArtikosProfileType.VIDA,
+                variableNomina,
+                variableNomina.cabecera().numeroNomina(),
+                variableNomina.cabecera().tipoNomina(),
+                variableNomina.cabecera().cantidadDocumentos(),
+                "<raw/>",
+                dryRun);
+    }
+
+    private DocumentoContable documentWith(
+            DocumentoContable source,
+            Integer secuencia,
+            Long idDocumento,
+            BigDecimal montoTotal,
+            List<Conciliacion> conciliaciones) {
+        return new DocumentoContable(
+                secuencia,
+                source.rutProveedor(),
+                source.proveedor(),
+                source.nacional(),
+                idDocumento,
+                source.usuario(),
+                "%d".formatted(secuencia),
+                source.tipoDocumento(),
+                source.tipoErp(),
+                source.fechaEmision(),
+                source.fechaVencimiento(),
+                source.fechaRecepcion(),
+                source.fechaRecepSii(),
+                source.urlDocumento(),
+                source.observacion(),
+                source.docCurrency(),
+                source.montoNeto(),
+                source.montoIva(),
+                source.montoExento(),
+                source.otrosImpuestos(),
+                montoTotal,
+                source.referencias(),
+                conciliaciones);
+    }
+
+    private Conciliacion conciliacionWithDistributions(int distributionCount) {
+        List<DistribucionContable> distributions = java.util.stream.IntStream.rangeClosed(1, distributionCount)
+                .mapToObj(index -> new DistribucionContable(
+                        index,
+                        "item " + index,
+                        "CC",
+                        "Centro costo",
+                        "CTA",
+                        "Cuenta",
+                        BigDecimal.TEN,
+                        BigDecimal.ZERO,
+                        BigDecimal.ZERO,
+                        BigDecimal.TEN))
+                .toList();
+        return new Conciliacion(
+                "NETO",
+                "PRODUCTO",
+                "CONC",
+                "CLP",
+                BigDecimal.TEN,
+                "RECEP",
+                BigDecimal.ONE,
+                "comentario",
+                1,
+                distributions);
     }
 
     private ResultadoNomina resultadoNomina() {

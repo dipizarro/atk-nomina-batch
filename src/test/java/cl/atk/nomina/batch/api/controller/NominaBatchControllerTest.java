@@ -37,7 +37,7 @@ class NominaBatchControllerTest {
 
     @BeforeEach
     void setUp() throws Exception {
-        when(soapClient.fetchNominaRawXml(any())).thenReturn(sampleNominaXml());
+        when(soapClient.fetchNominaRawXml(any())).thenReturn(sampleNominaXml(), noNominasXml());
         when(soapClient.resultadoNominaConfig(any())).thenReturn(resultadoOperationConfig());
     }
 
@@ -52,7 +52,7 @@ class NominaBatchControllerTest {
                 .andExpect(jsonPath("$.status", anyOf(is("STARTING"), is("STARTED"))))
                 .andExpect(jsonPath("$.message", is("Batch iniciado correctamente")))
                 .andExpect(jsonPath("$.profile", is("GENERALES")))
-                .andExpect(jsonPath("$.maxNominas", is(1)))
+                .andExpect(jsonPath("$.maxNominas", is(1000)))
                 .andExpect(jsonPath("$.dryRun", is(true)))
                 .andReturn();
 
@@ -154,6 +154,29 @@ class NominaBatchControllerTest {
         return StreamUtils.copyToString(
                 new ClassPathResource("samples/ZSVIDA_Nom15960.xml").getInputStream(),
                 StandardCharsets.UTF_8);
+    }
+
+    private String noNominasXml() {
+        return """
+                <soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
+                  <soap:Body>
+                    <EjecutaTrxResponse>
+                      <EjecutaTrxResult>
+                        <Message>
+                          <MessageId>
+                            <MsgStatus>0</MsgStatus>
+                          </MessageId>
+                          <MessageOut>
+                            <LogMessage>
+                              <MessageText>No hay nominas para procesar</MessageText>
+                            </LogMessage>
+                          </MessageOut>
+                        </Message>
+                      </EjecutaTrxResult>
+                    </EjecutaTrxResponse>
+                  </soap:Body>
+                </soap:Envelope>
+                """;
     }
 
     private ArtikosOperationConfig resultadoOperationConfig() {

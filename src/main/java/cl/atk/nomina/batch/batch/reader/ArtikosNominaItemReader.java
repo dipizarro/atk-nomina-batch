@@ -36,7 +36,7 @@ public class ArtikosNominaItemReader implements ItemReader<ArtikosFetchedNomina>
         this.soapClient = soapClient;
         this.responseParser = responseParser;
         this.profile = ArtikosProfileType.from(profile);
-        this.maxNominas = maxNominas == null ? 1L : maxNominas;
+        this.maxNominas = maxNominas == null ? Long.MAX_VALUE : maxNominas;
         this.dryRun = Boolean.parseBoolean(dryRun);
     }
 
@@ -45,7 +45,8 @@ public class ArtikosNominaItemReader implements ItemReader<ArtikosFetchedNomina>
         LoggingContext.putProfile(profile.name());
         LoggingContext.putOperation(ArtikosOperation.NOMFACTERP.name());
         if (fetchedCount >= maxNominas) {
-            LOGGER.info("Artikos reader reached maxNominas={} profile={} dryRun={}", maxNominas, profile, dryRun);
+            LOGGER.info("Artikos reader reached operational safety limit maxNominas={} profile={} dryRun={} fetchedCount={}",
+                    maxNominas, profile, dryRun, fetchedCount);
             LoggingContext.clearOperation();
             LoggingContext.clearNomina();
             return null;
@@ -56,8 +57,8 @@ public class ArtikosNominaItemReader implements ItemReader<ArtikosFetchedNomina>
                     profile, fetchedCount, maxNominas, dryRun);
             String rawXml = soapClient.fetchNominaRawXml(profile);
             if (responseParser.isNoNominasResponse(rawXml)) {
-                LOGGER.info("Artikos returned no nominas profile={} message={}",
-                        profile, responseParser.extractNoNominasMessage(rawXml));
+                LOGGER.info("Artikos returned no nominas profile={} fetchedCount={} message={}",
+                        profile, fetchedCount, responseParser.extractNoNominasMessage(rawXml));
                 return null;
             }
 
