@@ -19,6 +19,24 @@ Estos endpoints forman parte del contrato REST productivo de la aplicacion.
 
 El endpoint de purga solo se carga si `app.admin.enabled=true`. Ademas, debe protegerse con autenticacion y autorizacion antes de uso productivo.
 
+## Productive batch usage
+
+Ejemplo de inicio operacional:
+
+```http
+POST /api/v1/nominas/batch/start
+Content-Type: application/json
+```
+
+```json
+{
+  "profile": "GENERALES",
+  "dryRun": false
+}
+```
+
+El batch consulta `NOMFACTERP` hasta que Artikos responde que no hay nominas para procesar. `maxNominas` puede informarse en el request, pero solo actua como limite de seguridad; no es la condicion funcional de termino. Cada nomina procesada genera una fila en `CONTROL_NOMINA` y un envio `NOMFACTRES`.
+
 ## Diagnostic Endpoints
 
 Los endpoints diagnosticos solo se cargan si:

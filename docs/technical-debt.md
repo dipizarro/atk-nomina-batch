@@ -9,6 +9,13 @@ Resuelto parcialmente en Sprint 8.2:
 - Endpoints diagnosticos protegidos con `app.diagnostics.enabled=true`.
 - Endpoint duplicado de configuracion Artikos unificado en `/api/v1/dev/artikos/config/{profile}`.
 
+Abordado en Sprint 8.8:
+
+- Documentacion operativa inicial creada en `docs/runbook.md`.
+- Consultas SQL de soporte creadas en `docs/sql-queries.md`.
+- Guia de escenarios de soporte creada en `docs/support-guide.md`.
+- README enlaza la documentacion operacional principal.
+
 Pendiente:
 
 - Eliminar definitivamente endpoints diagnosticos si el proyecto no los requiere.

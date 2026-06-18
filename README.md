@@ -196,6 +196,19 @@ Los controles operativos estan documentados en `docs/operational-hardening.md`.
 
 Incluyen timeouts SOAP, retry tecnico, errores no reintentables, limite `maxNominas`, concurrencia por perfil, health checks y proteccion por property del endpoint administrativo.
 
+## Operations
+
+La documentacion operativa inicial esta en:
+
+- Runbook operativo: `docs/runbook.md`
+- Consultas SQL de soporte: `docs/sql-queries.md`
+- Guia de soporte: `docs/support-guide.md`
+- Manejo de errores: `docs/error-handling.md`
+- Hardening operativo: `docs/operational-hardening.md`
+- Secretos y ambientes: `docs/secrets.md`
+
+El runbook explica como iniciar el batch, monitorear estado, revisar `CONTROL_NOMINA`, interpretar metadata `BATCH_*`, purgar metadata y actuar ante errores frecuentes.
+
 ## Architecture and package conventions
 
 La revision estructural esta documentada en `docs/architecture-review.md`.
@@ -211,6 +224,9 @@ El servicio nacio como una POC para validar integracion SOAP Artikos, procesamie
 - Arquitectura: `docs/architecture.md`
 - Flujo batch: `docs/batch-flow.md`
 - Endpoints: `docs/endpoints.md`
+- Runbook operativo: `docs/runbook.md`
+- Consultas SQL de soporte: `docs/sql-queries.md`
+- Guia de soporte: `docs/support-guide.md`
 - Logging: `docs/logging.md`
 - Hardening operativo: `docs/operational-hardening.md`
 - Manejo de errores: `docs/error-handling.md`
@@ -228,5 +244,5 @@ mvn clean test
 ## Commit sugerido
 
 ```bash
-git commit -m "feat: add operational hardening controls"
+git commit -m "docs: add operational runbook and support guide"
 ```
