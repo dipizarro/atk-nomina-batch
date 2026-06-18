@@ -4,12 +4,26 @@
 
 Every operational log line includes MDC fields from Log4j:
 
+- `correlationId`
+- `requestId`
+- `clientId`
+- `consumer`
 - `jobExecutionId`
 - `profile`
 - `numeroNomina`
 - `operation`
 
 The pattern is configured in `src/main/resources/log4j2-spring.xml`.
+
+Gateway headers are captured when CONC/Kong sends them:
+
+- `X-Correlation-Id` -> `correlationId`
+- `X-Request-Id` -> `requestId`
+- `X-Client-Id` -> `clientId`
+- `X-Consumer-Username` -> `consumer`
+- `X-Forwarded-For` -> `forwardedFor`
+
+The application does not capture or log `Authorization`.
 
 ## Operations
 
@@ -43,6 +57,7 @@ WARN ... jobExecutionId=12 profile=VIDA numeroNomina=15960 operation=NOMFACTCONF
 ## Sensitive Data
 
 - Never print complete Artikos tokens.
+- Never print `Authorization` headers.
 - Token logs must use `tokenPresent` and `tokenMasked`.
 - SOAP XML must not be printed at `INFO`.
 - SOAP XML may be printed only at `DEBUG` and only after applying `maskToken(...)`.

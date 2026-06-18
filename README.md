@@ -115,6 +115,26 @@ Cuando esta activo, la aplicacion expone endpoints bajo `/api/v1/dev/...` para p
 
 Este modo no debe estar habilitado en produccion. Los endpoints diagnosticos pueden consumir servicios Artikos QA o escribir datos de prueba en Oracle.
 
+## Gateway exposure
+
+La aplicacion esta preparada para operar detras del API Gateway corporativo CONC/Kong. En este sprint no implementa Spring Security, OAuth2, Basic Auth ni JWT; la autenticacion y autorizacion deben ser aplicadas por el gateway.
+
+El contrato productivo inicial publicado por gateway es solamente:
+
+```http
+POST /api/v1/nominas/batch/start
+```
+
+Los endpoints operativos de consulta, `CONTROL_NOMINA`, administracion y diagnostico quedan apagados por defecto en QA/PROD:
+
+```properties
+app.endpoints.operations.enabled=false
+app.diagnostics.enabled=false
+app.admin.enabled=false
+```
+
+La matriz de exposicion esta documentada en `docs/gateway-endpoints.md`.
+
 ## Oracle
 
 Los scripts Oracle necesarios estan en:
@@ -227,6 +247,7 @@ El servicio nacio como una POC para validar integracion SOAP Artikos, procesamie
 - Runbook operativo: `docs/runbook.md`
 - Consultas SQL de soporte: `docs/sql-queries.md`
 - Guia de soporte: `docs/support-guide.md`
+- Matriz gateway: `docs/gateway-endpoints.md`
 - Logging: `docs/logging.md`
 - Hardening operativo: `docs/operational-hardening.md`
 - Manejo de errores: `docs/error-handling.md`

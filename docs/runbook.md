@@ -87,6 +87,14 @@ Endpoint:
 GET /api/v1/nominas/batch/{jobExecutionId}
 ```
 
+En QA/PROD este endpoint puede no estar disponible porque los endpoints operativos se cargan solo si:
+
+```properties
+app.endpoints.operations.enabled=true
+```
+
+El seguimiento normal en QA/PROD debe realizarse por logs y Oracle usando las consultas de `docs/sql-queries.md`.
+
 Revisar principalmente:
 
 - `status`
@@ -110,6 +118,8 @@ Endpoint:
 ```http
 GET /api/v1/nominas/batch/{jobExecutionId}/summary
 ```
+
+En QA/PROD este endpoint no queda disponible por defecto. Para soporte interno puede habilitarse temporalmente con `app.endpoints.operations.enabled=true`, solo con autorizacion operativa.
 
 El summary consolida resultados funcionales del job:
 
@@ -141,6 +151,8 @@ Endpoints productivos:
 GET /api/v1/control-nomina/jobs/{jobExecutionId}
 GET /api/v1/control-nomina/jobs/{jobExecutionId}/nominas/{numeroNomina}
 ```
+
+En QA/PROD estos endpoints no quedan disponibles por defecto. Usar SQL sobre Oracle como mecanismo normal de soporte. Las consultas estan en `docs/sql-queries.md`.
 
 `CONTROL_NOMINA` es la tabla funcional de control por nomina. Debe revisarse cuando:
 

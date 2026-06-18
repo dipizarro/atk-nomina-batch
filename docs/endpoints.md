@@ -1,21 +1,37 @@
 # Endpoints
 
+## Gateway contract
+
+El contrato productivo inicial expuesto por CONC/Kong es solamente:
+
+| Metodo | Ruta | Uso |
+| --- | --- | --- |
+| `POST` | `/api/v1/nominas/batch/start` | Dispara asincronicamente el batch desde un sistema externo |
+
+La autenticacion y autorizacion se gestionan en el gateway corporativo. La aplicacion no implementa seguridad propia pesada en este alcance.
+
 ## Productive Endpoints
 
-Estos endpoints forman parte del contrato REST productivo de la aplicacion.
+Estos endpoints forman parte de la superficie REST de la aplicacion. En QA/PROD, por defecto solo `POST /api/v1/nominas/batch/start` queda disponible para publicacion inicial por gateway.
 
 | Metodo | Ruta | Uso |
 | --- | --- | --- |
 | `GET` | `/api/v1/health` | Health propio de la aplicacion |
 | `POST` | `/api/v1/nominas/batch/start` | Inicia asincronicamente el job de nominas |
-| `GET` | `/api/v1/nominas/batch/{jobExecutionId}` | Consulta estado Spring Batch |
-| `GET` | `/api/v1/nominas/batch/{jobExecutionId}/summary` | Consulta resumen funcional del job |
-| `GET` | `/api/v1/nominas/batch/{jobExecutionId}/results/{numeroNomina}` | Consulta resultado funcional por nomina |
-| `GET` | `/api/v1/control-nomina/jobs/{jobExecutionId}` | Consulta registros `CONTROL_NOMINA` por job |
-| `GET` | `/api/v1/control-nomina/jobs/{jobExecutionId}/nominas/{numeroNomina}` | Consulta un registro `CONTROL_NOMINA` especifico |
+| `GET` | `/api/v1/nominas/batch/{jobExecutionId}` | Consulta estado Spring Batch; requiere `app.endpoints.operations.enabled=true` |
+| `GET` | `/api/v1/nominas/batch/{jobExecutionId}/summary` | Consulta resumen funcional del job; requiere `app.endpoints.operations.enabled=true` |
+| `GET` | `/api/v1/nominas/batch/{jobExecutionId}/results/{numeroNomina}` | Consulta resultado funcional por nomina; requiere `app.endpoints.operations.enabled=true` |
+| `GET` | `/api/v1/control-nomina/jobs/{jobExecutionId}` | Consulta registros `CONTROL_NOMINA` por job; requiere `app.endpoints.operations.enabled=true` |
+| `GET` | `/api/v1/control-nomina/jobs/{jobExecutionId}/nominas/{numeroNomina}` | Consulta un registro `CONTROL_NOMINA` especifico; requiere `app.endpoints.operations.enabled=true` |
 | `POST` | `/api/v1/admin/batch-metadata/purge` | Simula o ejecuta purga controlada de metadata `BATCH_*`; requiere `app.admin.enabled=true` |
 | `GET` | `/actuator/health` | Health Spring Actuator |
 | `GET` | `/swagger-ui.html` | Documentacion OpenAPI |
+
+Los endpoints operativos de consulta solo se cargan si:
+
+```properties
+app.endpoints.operations.enabled=true
+```
 
 El endpoint de purga solo se carga si `app.admin.enabled=true`. Ademas, debe protegerse con autenticacion y autorizacion antes de uso productivo.
 

@@ -16,11 +16,18 @@ Abordado en Sprint 8.8:
 - Guia de escenarios de soporte creada en `docs/support-guide.md`.
 - README enlaza la documentacion operacional principal.
 
+Abordado en Sprint 8.9:
+
+- Contrato gateway minimo documentado en `docs/gateway-endpoints.md`.
+- `POST /api/v1/nominas/batch/start` queda como unico endpoint productivo inicial para CONC/Kong.
+- Endpoints operativos `GET /api/v1/nominas/batch/**` y `GET /api/v1/control-nomina/**` quedan condicionados por `app.endpoints.operations.enabled=true`.
+- Headers de trazabilidad de gateway se agregan al MDC sin capturar `Authorization`.
+
 Pendiente:
 
 - Eliminar definitivamente endpoints diagnosticos si el proyecto no los requiere.
 - El endpoint administrativo de purga metadata ya queda condicionado por `app.admin.enabled=true`, pero falta protegerlo con autenticacion y autorizacion corporativa.
-- Definir mecanismo de autenticacion/autorizacion para endpoints productivos.
+- Definir si la aplicacion necesitara validaciones defensivas adicionales ademas de la autenticacion/autorizacion aplicada por CONC/Kong.
 - Definir si `POST /api/v1/nominas/batch/start` debe exigir siempre body con `profile` o mantener compatibilidad de dry-run sin body.
 
 ## Namespace Java
