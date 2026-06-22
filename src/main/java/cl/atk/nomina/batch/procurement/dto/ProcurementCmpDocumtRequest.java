@@ -25,6 +25,9 @@ public record ProcurementCmpDocumtRequest(
         @JsonProperty("COD_CUENTA")
         String codCuenta,
 
+        @JsonProperty("COD_TIP_CUENTA")
+        String codTipCuenta,
+
         @JsonProperty("COD_CONTBL")
         String codContbl,
 
@@ -48,6 +51,12 @@ public record ProcurementCmpDocumtRequest(
 
         @JsonProperty("MTO_TOT_IVADIG")
         BigDecimal mtoTotIvadig,
+
+        @JsonProperty("MTO_TOT_DOCDIG")
+        BigDecimal mtoTotDocdig,
+
+        @JsonProperty("NUM_FOL_DOCUMT")
+        Long numFolDocumt,
 
         @JsonProperty("FEC_VNCCTA")
         String fecVnccta,

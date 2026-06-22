@@ -50,36 +50,43 @@ public class ProcurementDocumentMapper {
         validator.validate(profile, properties);
 
         String documentType = properties.getDocumentType();
+        Long rutProveedor = RutUtils.extractRutNumber(documento.rutProveedor());
         ProcurementCmpRequest cmp = new ProcurementCmpRequest(
-                toCmpDocumt(profile, documento),
+                toCmpDocumt(profile, documento, rutProveedor),
                 toDetails(documento),
-                new ProcurementCmpDocumtDetRutRequest());
+                new ProcurementCmpDocumtDetRutRequest(rutProveedor, rutProveedor, "V"));
 
         return new ProcurementDocumentRequest(documentType, cmp, null);
     }
 
-    private ProcurementCmpDocumtRequest toCmpDocumt(ArtikosProfileType profile, DocumentoContable documento) {
+    private ProcurementCmpDocumtRequest toCmpDocumt(
+            ArtikosProfileType profile,
+            DocumentoContable documento,
+            Long rutProveedor) {
         String fechaEmision = dateMapper.toProcurementDate(documento.fechaEmision());
         String fechaRecepcion = dateMapper.toProcurementDate(documento.fechaRecepcion());
         String fechaVencimiento = dateMapper.toProcurementDate(
                 isBlank(documento.fechaVencimiento()) ? documento.fechaEmision() : documento.fechaVencimiento());
 
         return new ProcurementCmpDocumtRequest(
-                properties.getDocumentType(),
+                properties.getCmpDocumentType(),
                 validator.company(profile, properties),
                 properties.getNumPeriodo(),
-                RutUtils.extractRutNumber(documento.rutProveedor()),
+                rutProveedor,
                 requiredText(documento.numeroDocumento(), "DocumentoContable.numeroDocumento"),
                 properties.getCodSistem(),
                 firstCodCuenta(documento),
+                properties.getCodTipCuenta(),
                 properties.getCodContbl(),
-                isBlank(documento.docCurrency()) ? properties.getDefaultCurrency() : documento.docCurrency(),
+                properties.getDefaultCurrency(),
                 fechaEmision,
                 documentGloss(documento),
                 fechaEmision,
                 zeroIfNull(documento.montoNeto()),
                 zeroIfNull(documento.montoExento()),
                 zeroIfNull(documento.montoIva()),
+                zeroIfNull(documento.montoTotal()),
+                requiredLong(documento.numeroDocumento(), "DocumentoContable.numeroDocumento"),
                 fechaVencimiento,
                 properties.getCodigoRecIva(),
                 fechaRecepcion);
@@ -100,7 +107,9 @@ public class ProcurementDocumentMapper {
                     properties.getCodTipUnid(),
                     properties.getGrlCodItem(),
                     distribucion.codCentroCosto(),
-                    lineGloss(documento, distribucion),
+                    requiredText(distribucion.codCuentaContable(), "DistribucionContable.codCuentaContable"),
+                    properties.getCodTipCuenta(),
+                    properties.getLineGloss(),
                     properties.getDefaultCantidad(),
                     zeroIfNull(unitValue),
                     zeroIfNull(unitValue),
@@ -144,18 +153,21 @@ public class ProcurementDocumentMapper {
         return "Artikos " + safe(documento.proveedor()) + " doc " + safe(documento.numeroDocumento()).trim();
     }
 
-    private String lineGloss(DocumentoContable documento, DistribucionContable distribucion) {
-        if (!isBlank(distribucion.itemDescription())) {
-            return distribucion.itemDescription();
-        }
-        return documentGloss(documento);
-    }
-
     private String requiredText(String value, String fieldName) {
         if (isBlank(value)) {
             throw new ProcurementMappingException("Missing Artikos field for Procurement mapping: " + fieldName);
         }
         return value;
+    }
+
+    private Long requiredLong(String value, String fieldName) {
+        String text = requiredText(value, fieldName);
+        try {
+            return Long.valueOf(text.trim());
+        } catch (NumberFormatException exception) {
+            throw new ProcurementMappingException(
+                    "Invalid numeric Artikos field for Procurement mapping: " + fieldName + "=" + value);
+        }
     }
 
     private BigDecimal firstNonNull(BigDecimal... values) {

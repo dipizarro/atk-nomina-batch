@@ -11,6 +11,9 @@ La aplicacion distingue errores tecnicos de integracion, rechazos funcionales de
 | Fetch SOAP error | FAILED | no aplica | Detener |
 | Confirm error | FAILED | ERROR | Detener |
 | Documento NOK | COMPLETED | NOK | Informar resultado |
+| Procurement NOK funcional | COMPLETED | NOK | Informar resultado |
+| Procurement error tecnico | FAILED | ERROR | Detener sin enviar NOMFACTRES |
+| Procurement mapping error | FAILED | ERROR | Detener sin enviar NOMFACTRES |
 | NOMFACTRES error | FAILED | ERROR | Detener |
 | Oracle error | FAILED | incierto | Detener |
 
@@ -23,6 +26,8 @@ Los errores de integracion se clasifican con `IntegrationErrorType`:
 - `XML_PARSING_ERROR`: la respuesta SOAP no puede parsearse como nomina valida.
 - `NOMINA_CONFIRM_ERROR`: Artikos rechaza `NOMFACTCONFIR`.
 - `NOMINA_PROCESSING_ERROR`: falla interna procesando la nomina.
+- `PROCUREMENT_MAPPING_ERROR`: falla mapeando Artikos hacia request CMP Procurement o falta configuracion requerida.
+- `PROCUREMENT_TECHNICAL_ERROR`: falla tecnica consumiendo Procurement, incluyendo timeout, conexion, HTTP `5xx`, serializacion o respuesta no parseable.
 - `NOMINA_RESULT_ERROR`: Artikos rechaza `NOMFACTRES` o falla su envio.
 - `ORACLE_CONTROL_ERROR`: falla persistiendo estado funcional en `CONTROL_NOMINA`.
 - `UNKNOWN_ERROR`: fallback para errores no clasificados.
@@ -31,7 +36,18 @@ Los errores de integracion se clasifican con `IntegrationErrorType`:
 
 El job termina `COMPLETED` cuando Artikos responde que no hay mas nominas para procesar. Tambien termina `COMPLETED` si se alcanza `maxNominas`, porque ese parametro es un limite operativo de seguridad y no un error funcional.
 
-El job termina `FAILED` ante errores tecnicos de fetch, rechazo de confirmacion, rechazo o falla de `NOMFACTRES`, y errores Oracle que impiden registrar o actualizar `CONTROL_NOMINA`.
+El job termina `FAILED` ante errores tecnicos de fetch, rechazo de confirmacion, errores tecnicos/mapping de Procurement, rechazo o falla de `NOMFACTRES`, y errores Oracle que impiden registrar o actualizar `CONTROL_NOMINA`.
+
+## Procurement
+
+Procurement distingue respuesta funcional de falla tecnica:
+
+- `statusCode=0`: documento `OK`.
+- `statusCode!=0`: documento `NOK`. El job continua, se genera `NOMFACTRES` y la nomina queda `NOK` si Artikos acepta el resultado.
+- timeout, conexion, HTTP `5xx`, serializacion o respuesta no parseable: `PROCUREMENT_TECHNICAL_ERROR`.
+- error de mapeo Artikos -> CMP o propiedad requerida ausente: `PROCUREMENT_MAPPING_ERROR`.
+
+Ante `PROCUREMENT_TECHNICAL_ERROR` o `PROCUREMENT_MAPPING_ERROR`, `CONTROL_NOMINA` queda `ERROR`, el job termina `FAILED` y no se informa `NOMFACTRES` para esa nomina.
 
 ## Respuestas REST
 

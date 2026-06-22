@@ -55,7 +55,7 @@ public class ArtikosNominaItemProcessor implements ItemProcessor<ArtikosFetchedN
             try {
                 LOGGER.info("Dry-run processing Artikos nomina jobExecutionId={} profile={} numeroNomina={}",
                         jobExecutionId, item.profile(), numeroNomina);
-                return processLocally(item);
+                return processNomina(item, true);
             } finally {
                 LoggingContext.clearAll();
             }
@@ -87,8 +87,12 @@ public class ArtikosNominaItemProcessor implements ItemProcessor<ArtikosFetchedN
             LOGGER.info("Artikos confirmation OK profile={} numeroNomina={}", item.profile(), numeroNomina);
             LoggingContext.clearOperation();
 
-            return processLocally(item);
+            return processNomina(item, false);
         } catch (ArtikosIntegrationException exception) {
+            if (exception.getErrorType() == IntegrationErrorType.PROCUREMENT_TECHNICAL_ERROR
+                    || exception.getErrorType() == IntegrationErrorType.PROCUREMENT_MAPPING_ERROR) {
+                markControlErrorIfRequired(exception);
+            }
             throw exception;
         } catch (RuntimeException exception) {
             ArtikosIntegrationException integrationException = new ArtikosIntegrationException(
@@ -142,15 +146,23 @@ public class ArtikosNominaItemProcessor implements ItemProcessor<ArtikosFetchedN
         return LoggingContext.snapshot().get("operation");
     }
 
-    private ResultadoNomina processLocally(ArtikosFetchedNomina item) {
+    private ResultadoNomina processNomina(ArtikosFetchedNomina item, boolean forceSimulatedProcessing) {
         LoggingContext.clearOperation();
-        LOGGER.info("Generating NOMFACTRES locally profile={} numeroNomina={}", item.profile(), item.numeroNomina());
-        ResultadoNomina result = nominaProcessingService.process(
-                jobExecutionId,
-                item.numeroNomina(),
-                item.nomina(),
-                soapClient.resultadoNominaConfig(item.profile()));
-        LOGGER.info("Nomina processed locally jobExecutionId={} profile={} numeroNomina={} totalDocuments={} "
+        LOGGER.info("Processing nomina documents profile={} numeroNomina={}", item.profile(), item.numeroNomina());
+        ResultadoNomina result = forceSimulatedProcessing
+                ? nominaProcessingService.processSimulated(
+                        jobExecutionId,
+                        item.numeroNomina(),
+                        item.profile(),
+                        item.nomina(),
+                        soapClient.resultadoNominaConfig(item.profile()))
+                : nominaProcessingService.process(
+                        jobExecutionId,
+                        item.numeroNomina(),
+                        item.profile(),
+                        item.nomina(),
+                        soapClient.resultadoNominaConfig(item.profile()));
+        LOGGER.info("Nomina documents processed jobExecutionId={} profile={} numeroNomina={} totalDocuments={} "
                         + "totalOk={} totalNok={}",
                 jobExecutionId,
                 item.profile(),

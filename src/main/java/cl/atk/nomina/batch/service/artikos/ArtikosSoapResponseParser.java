@@ -32,7 +32,7 @@ public class ArtikosSoapResponseParser {
     }
 
     public String extractNoNominasMessage(String rawXml) {
-        String messageText = textByLocalName(rawXml, "MessageText");
+        String messageText = textByLocalNameIgnoringStatus(rawXml, "MessageText");
         return messageText.isBlank() ? "No hay nominas para procesar" : messageText;
     }
 
@@ -54,13 +54,23 @@ public class ArtikosSoapResponseParser {
         return textByXPath(rawXml, "string(//*[local-name()='" + localName + "'][1])");
     }
 
+    private String textByLocalNameIgnoringStatus(String rawXml, String localName) {
+        return textByXPath(rawXml, "string(//*[local-name()='" + localName + "'][1])", false);
+    }
+
     private String textByXPath(String rawXml, String expression) {
+        return textByXPath(rawXml, expression, true);
+    }
+
+    private String textByXPath(String rawXml, String expression, boolean validateStatus) {
         try {
             Document document = parse(rawXml);
             XPath xpath = XPathFactory.newInstance().newXPath();
-            Node node = (Node) xpath.evaluate("//*[local-name()='MessageId']", document, XPathConstants.NODE);
+            Node node = validateStatus
+                    ? (Node) xpath.evaluate("//*[local-name()='MessageId']", document, XPathConstants.NODE)
+                    : null;
             String msgStatus = node == null ? "" : xpath.evaluate("string(./*[local-name()='MsgStatus'])", node);
-            if (!msgStatus.isBlank() && !"0".equals(msgStatus)) {
+            if (validateStatus && !msgStatus.isBlank() && !"0".equals(msgStatus)) {
                 String messageText = xpath.evaluate("string(//*[local-name()='MessageText'][1])", document);
                 throw new NominaXmlParsingException("Artikos respondio con MsgStatus " + msgStatus + ": " + messageText);
             }

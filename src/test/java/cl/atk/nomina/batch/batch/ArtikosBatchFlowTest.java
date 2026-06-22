@@ -31,6 +31,7 @@ import cl.atk.nomina.batch.service.NominaErrorPolicyService;
 import cl.atk.nomina.batch.service.NominaProcessingService;
 import cl.atk.nomina.batch.service.NominaResultXmlService;
 import cl.atk.nomina.batch.service.NominaXmlParserService;
+import cl.atk.nomina.batch.service.SimulatedDocumentProcessingService;
 import cl.atk.nomina.batch.service.artikos.ArtikosGenericSoapResponseParser;
 import cl.atk.nomina.batch.service.artikos.ArtikosSoapClient;
 import cl.atk.nomina.batch.service.artikos.ArtikosSoapResponseParser;
@@ -168,14 +169,46 @@ class ArtikosBatchFlowTest {
     }
 
     @Test
+    void processorUsesSimulatedProcessingWhenDryRunIsTrue() {
+        ControlNominaService controlNominaService = mock(ControlNominaService.class);
+        ArtikosSoapClient soapClient = mock(ArtikosSoapClient.class);
+        ArtikosGenericSoapResponseParser genericParser = mock(ArtikosGenericSoapResponseParser.class);
+        NominaProcessingService nominaProcessingService = mock(NominaProcessingService.class);
+        ResultadoNomina expectedResult = resultadoNomina();
+        when(soapClient.resultadoNominaConfig(ArtikosProfileType.VIDA)).thenReturn(resultadoOperationConfig());
+        when(nominaProcessingService.processSimulated(
+                eq(7L),
+                eq(15960L),
+                eq(ArtikosProfileType.VIDA),
+                any(Nomina.class),
+                any(ArtikosOperationConfig.class)))
+                .thenReturn(expectedResult);
+        ArtikosNominaItemProcessor processor = processor(
+                controlNominaService, soapClient, genericParser, nominaProcessingService, "true");
+
+        ResultadoNomina result = processor.process(fetchedNomina(true));
+
+        assertThat(result).isSameAs(expectedResult);
+        verify(nominaProcessingService).processSimulated(
+                eq(7L),
+                eq(15960L),
+                eq(ArtikosProfileType.VIDA),
+                any(Nomina.class),
+                any(ArtikosOperationConfig.class));
+        verify(nominaProcessingService, never()).process(any(), any(), any(), any(), any());
+    }
+
+    @Test
     void processorMarksErrorWhenConfirmationFails() {
         ControlNominaService controlNominaService = mock(ControlNominaService.class);
         ArtikosSoapClient soapClient = mock(ArtikosSoapClient.class);
         ArtikosGenericSoapResponseParser genericParser = mock(ArtikosGenericSoapResponseParser.class);
+        NominaProcessingService nominaProcessingService = mock(NominaProcessingService.class);
         when(soapClient.confirmNominaRawXml(ArtikosProfileType.VIDA, 15960L, 0)).thenReturn("<nok/>");
         when(genericParser.parseGenericResponse("<nok/>"))
                 .thenReturn(new ArtikosGenericResponse("NOMFACTCONFIR", "1", "rechazada", false));
-        ArtikosNominaItemProcessor processor = processor(controlNominaService, soapClient, genericParser, "false");
+        ArtikosNominaItemProcessor processor = processor(
+                controlNominaService, soapClient, genericParser, nominaProcessingService, "false");
 
         assertThatThrownBy(() -> processor.process(fetchedNomina(false)))
                 .isInstanceOf(ArtikosIntegrationException.class)
@@ -183,6 +216,8 @@ class ArtikosBatchFlowTest {
                 .satisfies(exception -> assertThat(((ArtikosIntegrationException) exception).getErrorType())
                         .isEqualTo(IntegrationErrorType.NOMINA_CONFIRM_ERROR));
         verify(controlNominaService).markError(eq(7L), eq(15960L), any());
+        verify(nominaProcessingService, never()).process(any(), any(), any(), any(), any());
+        verify(nominaProcessingService, never()).processSimulated(any(), any(), any(), any(), any());
     }
 
     @Test
@@ -224,6 +259,43 @@ class ArtikosBatchFlowTest {
         assertThat(result.status()).isEqualTo("NOK");
         assertThat(result.totalNok()).isEqualTo(1);
         verify(controlNominaService, never()).markError(any(), any(), any());
+    }
+
+    @Test
+    void processorMarksErrorWhenProcurementTechnicalErrorFailsNominaProcessing() {
+        ControlNominaService controlNominaService = mock(ControlNominaService.class);
+        ArtikosSoapClient soapClient = mock(ArtikosSoapClient.class);
+        ArtikosGenericSoapResponseParser genericParser = mock(ArtikosGenericSoapResponseParser.class);
+        NominaProcessingService nominaProcessingService = mock(NominaProcessingService.class);
+        ArtikosIntegrationException procurementException = new ArtikosIntegrationException(
+                IntegrationErrorType.PROCUREMENT_TECHNICAL_ERROR,
+                ArtikosProfileType.VIDA.name(),
+                15960L,
+                "PROCUREMENT_POST_DOCUMENT",
+                "timeout",
+                null);
+        when(soapClient.confirmNominaRawXml(ArtikosProfileType.VIDA, 15960L, 0)).thenReturn("<ok/>");
+        when(soapClient.resultadoNominaConfig(ArtikosProfileType.VIDA)).thenReturn(resultadoOperationConfig());
+        when(genericParser.parseGenericResponse("<ok/>"))
+                .thenReturn(new ArtikosGenericResponse("NOMFACTCONFIR", "0", "", true));
+        when(nominaProcessingService.process(
+                eq(7L),
+                eq(15960L),
+                eq(ArtikosProfileType.VIDA),
+                any(Nomina.class),
+                any(ArtikosOperationConfig.class)))
+                .thenThrow(procurementException);
+        ArtikosNominaItemProcessor processor = processor(
+                controlNominaService, soapClient, genericParser, nominaProcessingService, "false");
+
+        assertThatThrownBy(() -> processor.process(fetchedNomina(false)))
+                .isInstanceOf(ArtikosIntegrationException.class)
+                .satisfies(exception -> assertThat(((ArtikosIntegrationException) exception).getErrorType())
+                        .isEqualTo(IntegrationErrorType.PROCUREMENT_TECHNICAL_ERROR));
+
+        verify(controlNominaService).markProcessing(7L, 15960L);
+        verify(controlNominaService).markError(eq(7L), eq(15960L), any());
+        verify(soapClient, never()).sendNominaResultRawXml(any(), any());
     }
 
     @Test
@@ -308,11 +380,20 @@ class ArtikosBatchFlowTest {
             ArtikosSoapClient soapClient,
             ArtikosGenericSoapResponseParser genericParser,
             String dryRun) {
+        return processor(controlNominaService, soapClient, genericParser, simulatedNominaProcessingService(), dryRun);
+    }
+
+    private ArtikosNominaItemProcessor processor(
+            ControlNominaService controlNominaService,
+            ArtikosSoapClient soapClient,
+            ArtikosGenericSoapResponseParser genericParser,
+            NominaProcessingService nominaProcessingService,
+            String dryRun) {
         return new ArtikosNominaItemProcessor(
                 controlNominaService,
                 soapClient,
                 genericParser,
-                new NominaProcessingService(new NominaDocumentoItemProcessor(), new NominaResultXmlService()),
+                nominaProcessingService,
                 new NominaErrorPolicyService(),
                 7L,
                 dryRun);
@@ -486,8 +567,20 @@ class ArtikosBatchFlowTest {
     }
 
     private ResultadoNomina resultadoNomina() {
-        return new NominaProcessingService(new NominaDocumentoItemProcessor(), new NominaResultXmlService())
-                .process(7L, 15960L, nominaXmlParserService.parseSampleFile(), resultadoOperationConfig());
+        return simulatedNominaProcessingService()
+                .process(
+                        7L,
+                        15960L,
+                        ArtikosProfileType.VIDA,
+                        nominaXmlParserService.parseSampleFile(),
+                        resultadoOperationConfig());
+    }
+
+    private NominaProcessingService simulatedNominaProcessingService() {
+        return new NominaProcessingService(
+                new SimulatedDocumentProcessingService(new NominaDocumentoItemProcessor()),
+                new SimulatedDocumentProcessingService(new NominaDocumentoItemProcessor()),
+                new NominaResultXmlService());
     }
 
     private ArtikosOperationConfig resultadoOperationConfig() {
@@ -513,7 +606,7 @@ class ArtikosBatchFlowTest {
                       <EjecutaTrxResult>
                         <Message>
                           <MessageId>
-                            <MsgStatus>0</MsgStatus>
+                            <MsgStatus>1</MsgStatus>
                           </MessageId>
                           <MessageOut>
                             <LogMessage>

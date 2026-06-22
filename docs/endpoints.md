@@ -68,7 +68,26 @@ Por defecto la propiedad esta deshabilitada en `application.properties`. Puede h
 | `POST` | `/api/v1/dev/artikos/nominas/fetch` | Prueba directa `NOMFACTERP` |
 | `POST` | `/api/v1/dev/artikos/nominas/confirm` | Prueba directa `NOMFACTCONFIR` |
 | `POST` | `/api/v1/dev/artikos/nominas/result/test` | Prueba directa `NOMFACTRES` con payload manual |
+| `POST` | `/api/v1/dev/procurement/documents/test` | Prueba mapeo Artikos XML -> Procurement CMP y envia un documento |
 | `GET` | `/api/v1/dev/artikos/config/{profile}` | Muestra configuracion Artikos enmascarada |
 | `POST` | `/api/v1/dev/control-nomina/test` | Inserta y actualiza un registro diagnostico en `CONTROL_NOMINA` |
 
 La configuracion enmascarada nunca debe exponer tokens completos. Los valores sensibles deben salir solo como presencia y mascara parcial.
+
+### Procurement diagnostic usage
+
+Este endpoint no confirma nomina en Artikos, no escribe `CONTROL_NOMINA` y no envia `NOMFACTRES`. Solo toma el XML SOAP local configurado en `atk.batch.sample-file` o un `rawXml` enviado en el request, selecciona un documento, lo mapea a CMP y llama Procurement.
+
+```http
+POST /api/v1/dev/procurement/documents/test
+Content-Type: application/json
+```
+
+```json
+{
+  "profile": "VIDA",
+  "documentIndex": 0
+}
+```
+
+Para usar un XML SOAP capturado, enviar `rawXml` como string JSON. Si se omite, se usa `atk.batch.sample-file`.

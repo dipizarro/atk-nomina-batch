@@ -21,7 +21,6 @@ import org.springframework.web.server.ResponseStatusException;
 @RestController
 @RequestMapping("/api/v1/dev/control-nomina")
 @ConditionalOnProperty(name = "app.diagnostics.enabled", havingValue = "true")
-@Deprecated(since = "8.1", forRemoval = false)
 public class ControlNominaDiagnosticController {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ControlNominaDiagnosticController.class);

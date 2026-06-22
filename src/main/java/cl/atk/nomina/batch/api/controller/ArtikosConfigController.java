@@ -19,7 +19,6 @@ import org.springframework.web.server.ResponseStatusException;
 @RequestMapping("/api/v1/dev/artikos/config")
 @Tag(name = "Artikos QA Diagnostic", description = "Endpoint temporal de diagnostico de configuracion SOAP QA; no usar en produccion")
 @ConditionalOnProperty(name = "app.diagnostics.enabled", havingValue = "true")
-@Deprecated(since = "8.1", forRemoval = false)
 public class ArtikosConfigController {
 
     private final ArtikosMaskedConfigService maskedConfigService;

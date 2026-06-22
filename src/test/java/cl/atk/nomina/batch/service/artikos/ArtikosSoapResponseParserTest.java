@@ -36,7 +36,7 @@ class ArtikosSoapResponseParserTest {
                       <EjecutaTrxResult>
                         <Message>
                           <MessageId>
-                            <MsgStatus>0</MsgStatus>
+                            <MsgStatus>1</MsgStatus>
                           </MessageId>
                           <MessageOut>
                             <LogMessage>

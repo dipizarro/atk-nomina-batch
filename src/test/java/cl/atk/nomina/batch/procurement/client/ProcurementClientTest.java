@@ -176,7 +176,11 @@ class ProcurementClientTest {
                               { "NUM_LIN_DOCCMP": 1 },
                               { "NUM_LIN_DOCCMP": 2 }
                             ],
-                            "CMP_DOCUMT_DET_RUT": {}
+                            "CMP_DOCUMT_DET_RUT": {
+                              "CMP_NUM_RUT": 96670840,
+                              "NUM_RUT": 96670840,
+                              "A_IND_VIGE": "V"
+                            }
                           },
                           "HNR": null
                         }

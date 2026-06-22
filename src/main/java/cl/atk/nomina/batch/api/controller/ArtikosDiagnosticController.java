@@ -38,7 +38,6 @@ import org.springframework.web.server.ResponseStatusException;
 @RequestMapping("/api/v1/dev/artikos/nominas")
 @Tag(name = "Artikos QA Diagnostic", description = "Endpoints temporales de diagnostico SOAP QA; no usar en produccion")
 @ConditionalOnProperty(name = "app.diagnostics.enabled", havingValue = "true")
-@Deprecated(since = "8.1", forRemoval = false)
 public class ArtikosDiagnosticController {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ArtikosDiagnosticController.class);

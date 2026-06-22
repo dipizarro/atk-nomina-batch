@@ -9,14 +9,17 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 public class ProcurementMappingProperties {
 
     private String documentType = "CMP";
+    private String cmpDocumentType = "FEC";
     private String codSistem = "CM";
     private Map<String, String> companyByProfile = new HashMap<>(Map.of(
             "GENERALES", "002",
             "VIDA", "001"));
     private Integer numPeriodo;
     private String codContbl;
+    private String codTipCuenta = "2";
     private String codTipUnid;
     private String grlCodItem;
+    private String lineGloss = "BENEFICIOS AL PERSONAL";
     private String defaultCurrency = "CLP";
     private BigDecimal valTipCambio = BigDecimal.ONE;
     private BigDecimal pctDscnto = BigDecimal.ZERO;
@@ -31,6 +34,14 @@ public class ProcurementMappingProperties {
 
     public void setDocumentType(String documentType) {
         this.documentType = documentType;
+    }
+
+    public String getCmpDocumentType() {
+        return cmpDocumentType;
+    }
+
+    public void setCmpDocumentType(String cmpDocumentType) {
+        this.cmpDocumentType = cmpDocumentType;
     }
 
     public String getCodSistem() {
@@ -65,6 +76,14 @@ public class ProcurementMappingProperties {
         this.codContbl = codContbl;
     }
 
+    public String getCodTipCuenta() {
+        return codTipCuenta;
+    }
+
+    public void setCodTipCuenta(String codTipCuenta) {
+        this.codTipCuenta = codTipCuenta;
+    }
+
     public String getCodTipUnid() {
         return codTipUnid;
     }
@@ -79,6 +98,14 @@ public class ProcurementMappingProperties {
 
     public void setGrlCodItem(String grlCodItem) {
         this.grlCodItem = grlCodItem;
+    }
+
+    public String getLineGloss() {
+        return lineGloss;
+    }
+
+    public void setLineGloss(String lineGloss) {
+        this.lineGloss = lineGloss;
     }
 
     public String getDefaultCurrency() {

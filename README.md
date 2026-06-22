@@ -2,7 +2,7 @@
 
 Servicio de integracion batch para procesar nominas de documentos contables desde Artikos mediante Spring Boot, Spring Batch y Oracle.
 
-La aplicacion consulta nominas con `NOMFACTERP`, confirma recepcion con `NOMFACTCONFIR`, procesa documentos localmente, envia resultados con `NOMFACTRES` y registra control funcional en `CONTROL_NOMINA`.
+La aplicacion consulta nominas con `NOMFACTERP`, confirma recepcion con `NOMFACTCONFIR`, procesa documentos localmente o contra Procurement, envia resultados con `NOMFACTRES` y registra control funcional en `CONTROL_NOMINA`.
 
 ## Requisitos
 
@@ -74,6 +74,8 @@ La configuracion base vive en `src/main/resources/application.properties`. La co
 - `artikos.retry.enabled=true`
 - `artikos.retry.max-attempts=3`
 - `artikos.retry.backoff-ms=1000`
+- `procurement.client.enabled=false`
+- `procurement.integration.enabled=false`
 
 En Oracle, Spring Batch no crea su metadata automaticamente. La aplicacion usa `spring.batch.jdbc.initialize-schema=never`, por lo que los scripts SQL deben ejecutarse manualmente antes de disparar el endpoint de inicio.
 
@@ -110,10 +112,21 @@ Cuando esta activo, la aplicacion expone endpoints bajo `/api/v1/dev/...` para p
 - `POST /api/v1/dev/artikos/nominas/fetch`
 - `POST /api/v1/dev/artikos/nominas/confirm`
 - `POST /api/v1/dev/artikos/nominas/result/test`
+- `POST /api/v1/dev/procurement/documents/test`
 - `GET /api/v1/dev/artikos/config/{profile}`
 - `POST /api/v1/dev/control-nomina/test`
 
 Este modo no debe estar habilitado en produccion. Los endpoints diagnosticos pueden consumir servicios Artikos QA o escribir datos de prueba en Oracle.
+
+Para probar solo el mapeo Artikos XML -> Procurement CMP y el POST a Procurement, sin confirmar Artikos ni tocar `CONTROL_NOMINA`:
+
+```powershell
+curl -X POST "http://localhost:8080/api/v1/dev/procurement/documents/test" `
+  -H "Content-Type: application/json" `
+  -d "{\"profile\":\"VIDA\",\"documentIndex\":0}"
+```
+
+Si no se envia `rawXml`, el endpoint usa el XML configurado en `atk.batch.sample-file`.
 
 ## Gateway exposure
 
@@ -135,15 +148,25 @@ app.admin.enabled=false
 
 La matriz de exposicion esta documentada en `docs/gateway-endpoints.md`.
 
-## Procurement integration status
+## Procurement integration
 
-Sprint 9.0 implementa el mapper JSON Artikos -> Procurement `CMP` y Sprint 9.1 agrega el cliente HTTP configurable para el endpoint objetivo:
+La aplicacion cuenta con mapper JSON Artikos -> Procurement `CMP`, cliente HTTP configurable y procesamiento documental opcional dentro del batch para el endpoint objetivo:
 
 ```http
 POST /api/v1/document
 ```
 
-La aplicacion todavia no integra Procurement al flujo batch ni consulta ASI. El mapeo actual construye el request CMP desde `DocumentoContable`, genera una linea por distribucion Artikos y deja `HNR` fuera de alcance. El cliente HTTP interpreta `statusCode=0` como OK, `statusCode!=0` como NOK funcional y errores HTTP `5xx`/timeout/conexion como errores tecnicos.
+Por defecto la integracion batch permanece deshabilitada:
+
+```properties
+procurement.integration.enabled=false
+```
+
+Cuando `procurement.integration.enabled=true`, cada documento Artikos se envia individualmente a Procurement. `statusCode=0` se interpreta como `OK`; `statusCode!=0` se interpreta como `NOK` funcional y se informa a Artikos via `NOMFACTRES`. Timeouts, errores de conexion, HTTP `5xx`, respuestas no parseables, serializacion y errores de mapeo Artikos -> CMP detienen el job, dejan `CONTROL_NOMINA` en `ERROR` y no envian `NOMFACTRES`.
+
+Si el job se inicia con `dryRun=true`, el procesamiento se fuerza a la ruta simulada/local y no llama Procurement aunque `procurement.integration.enabled=true`.
+
+El mapeo actual construye el request CMP desde `DocumentoContable`, genera una linea por distribucion Artikos y deja `HNR` fuera de alcance. La aplicacion aun no consulta ASI.
 
 El detalle esta documentado en `docs/procurement-mapping.md` y `docs/procurement-integration.md`.
 
@@ -218,6 +241,8 @@ Resumen operativo:
 - Error tecnico consultando Artikos: el job termina `FAILED`.
 - Rechazo de `NOMFACTCONFIR`: la nomina queda `ERROR` en `CONTROL_NOMINA` y el job termina `FAILED`.
 - Documento con validacion funcional NOK: el job continua, envia `NOMFACTRES` y la nomina queda `NOK`.
+- Documento rechazado funcionalmente por Procurement: el job continua, envia `NOMFACTRES` y la nomina queda `NOK`.
+- Error tecnico o mapping Procurement: la nomina queda `ERROR`, no se envia `NOMFACTRES` y el job termina `FAILED`.
 - Rechazo o falla de `NOMFACTRES`: la nomina queda `ERROR` y el job termina `FAILED`.
 
 Los endpoints de estado/resumen devuelven errores compactados; el stacktrace completo queda en logs y metadata Spring Batch.

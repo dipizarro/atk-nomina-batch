@@ -16,6 +16,12 @@ public record ProcurementCmpDocumtDetRequest(
         @JsonProperty("COD_CCOSTO")
         String codCcosto,
 
+        @JsonProperty("COD_CUENTA")
+        String codCuenta,
+
+        @JsonProperty("COD_TIP_CUENTA")
+        String codTipCuenta,
+
         @JsonProperty("GLS_LINEA")
         String glsLinea,
 

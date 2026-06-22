@@ -7,8 +7,9 @@ La aplicacion ya cuenta con:
 - mapper Artikos -> Procurement CMP;
 - DTOs JSON para `CMP`;
 - cliente HTTP configurable para `POST /api/v1/document`.
+- integracion opcional al processor real del batch.
 
-La integracion todavia no esta conectada al processor batch. El batch no envia documentos reales a Procurement en este sprint.
+La integracion con el flujo batch queda controlada por feature flag. Por defecto esta deshabilitada para mantener el comportamiento operacional existente.
 
 ## Endpoint objetivo
 
@@ -26,6 +27,7 @@ procurement.client.base-url=
 procurement.client.document-path=/api/v1/document
 procurement.client.connect-timeout-ms=5000
 procurement.client.read-timeout-ms=30000
+procurement.integration.enabled=false
 ```
 
 QA/PROD:
@@ -36,9 +38,24 @@ procurement.client.base-url=${PROCUREMENT_BASE_URL}
 procurement.client.document-path=/api/v1/document
 procurement.client.connect-timeout-ms=${PROCUREMENT_CONNECT_TIMEOUT_MS:5000}
 procurement.client.read-timeout-ms=${PROCUREMENT_READ_TIMEOUT_MS:30000}
+procurement.integration.enabled=${PROCUREMENT_INTEGRATION_ENABLED:false}
 ```
 
 Si `procurement.client.enabled=false`, el cliente no llama Procurement y lanza una excepcion controlada al intentar usarse.
+
+`procurement.integration.enabled` controla si el processor batch usa Procurement:
+
+- `false`: usa procesamiento local/simulado existente.
+- `true`: por cada documento Artikos genera request CMP y llama `POST /api/v1/document`.
+
+Excepcion operacional: si el job se inicia con `dryRun=true`, el batch fuerza procesamiento simulado y no llama Procurement, aunque `procurement.integration.enabled=true`.
+
+Para activar la ruta real se requiere que ambos flags esten activos:
+
+```properties
+procurement.client.enabled=true
+procurement.integration.enabled=true
+```
 
 ## Request
 
@@ -52,7 +69,11 @@ Estructura:
   "CMP": {
     "CMP_DOCUMT": {},
     "CMP_DOCUMT_DET": [],
-    "CMP_DOCUMT_DET_RUT": {}
+    "CMP_DOCUMT_DET_RUT": {
+      "CMP_NUM_RUT": 96670840,
+      "NUM_RUT": 96670840,
+      "A_IND_VIGE": "V"
+    }
   },
   "HNR": null
 }
@@ -76,6 +97,45 @@ Reglas:
 - `statusCode=0`: OK funcional.
 - `statusCode!=0`: NOK funcional si HTTP fue valido o el body es parseable.
 - `payload.externalDocumentId`, `payload.documentId` o `payload.id` puede usarse como identificador externo si Procurement lo entrega.
+
+## Flujo batch con Procurement
+
+Cuando `procurement.integration.enabled=true`:
+
+1. `ArtikosNominaItemProcessor` confirma la nomina con `NOMFACTCONFIR`.
+2. `NominaProcessingService` delega el procesamiento documental a `ProcurementDocumentProcessingService`.
+3. Por cada `DocumentoContable`, `ProcurementIntegrationService` mapea Artikos -> CMP y llama `ProcurementClient.postDocument`.
+4. `ProcurementResultMapper` convierte la respuesta Procurement en `ResultadoDocumento`.
+5. `NominaResultXmlService` genera `NOMFACTRES` con el estado final por documento.
+6. `ArtikosNominaResultItemWriter` envia `NOMFACTRES` y actualiza `CONTROL_NOMINA`.
+
+La unidad principal del batch sigue siendo la nomina. Procurement se invoca documento a documento dentro del procesamiento de esa nomina.
+
+Si `NOMFACTCONFIR` es rechazado, el processor marca `CONTROL_NOMINA` como `ERROR`, falla el job y no ejecuta Procurement para esa nomina.
+
+## Politica funcional
+
+- Documento aceptado por Procurement: `statusCode=0`, `ResultadoDocumento.status=OK`.
+- Documento rechazado funcionalmente por Procurement: `statusCode!=0`, `ResultadoDocumento.status=NOK`.
+- Una nomina con uno o mas documentos `NOK` no falla el job por esa razon; se informa a Artikos via `NOMFACTRES` y `CONTROL_NOMINA` queda `NOK` si el envio de resultado fue exitoso.
+
+## Politica tecnica
+
+Si ocurre un error tecnico Procurement, se detiene la nomina:
+
+- timeout;
+- error de conexion;
+- HTTP `5xx`;
+- request no serializable;
+- response no parseable;
+- error de mapeo Artikos -> CMP.
+
+Estos casos se traducen a `ArtikosIntegrationException` con:
+
+- `PROCUREMENT_TECHNICAL_ERROR` para fallas HTTP/red/serializacion/parseo;
+- `PROCUREMENT_MAPPING_ERROR` para fallas de mapeo o configuracion requerida.
+
+El processor marca `CONTROL_NOMINA` como `ERROR`, el job termina `FAILED` y no se debe enviar `NOMFACTRES` para esa nomina.
 
 ## Errores tecnicos
 
@@ -103,10 +163,9 @@ No se loguea el JSON completo en `INFO`. Request y response completos quedan res
 
 ## Fuera de alcance
 
-- Integrar Procurement al processor batch.
-- Reemplazar validacion/procesamiento actual del batch.
 - Implementar bulk.
 - Implementar retry Procurement.
 - Consultar ASI.
 - Modificar Artikos SOAP.
 - Cambiar `NOMFACTRES`.
+- Definir idempotencia final del documento en Procurement.

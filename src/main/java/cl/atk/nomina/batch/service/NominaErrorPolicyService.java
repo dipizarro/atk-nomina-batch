@@ -22,6 +22,8 @@ public class NominaErrorPolicyService {
             case XML_PARSING_ERROR,
                     NOMINA_CONFIRM_ERROR,
                     NOMINA_PROCESSING_ERROR,
+                    PROCUREMENT_MAPPING_ERROR,
+                    PROCUREMENT_TECHNICAL_ERROR,
                     NOMINA_RESULT_ERROR -> true;
             case ARTIKOS_FETCH_ERROR,
                     ARTIKOS_NO_NOMINAS,

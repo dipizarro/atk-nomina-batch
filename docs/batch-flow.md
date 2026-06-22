@@ -36,7 +36,7 @@ La respuesta es inmediata e incluye `jobExecutionId`, `jobName`, `status`, `prof
 4. Si se alcanza `maxNominas`, el reader retorna `null`, registra el limite alcanzado y el step termina normalmente.
 5. `ArtikosNominaItemProcessor` registra `CONTROL_NOMINA` en `PROCESSING`.
 6. Si `dryRun=false`, se confirma recepcion con `NOMFACTCONFIR`.
-7. `NominaProcessingService` procesa todos los documentos reales de la nomina.
+7. `NominaProcessingService` procesa todos los documentos reales de la nomina. Por defecto usa validaciones locales; si `procurement.integration.enabled=true`, envia cada documento a Procurement `POST /api/v1/document`.
 8. `NominaResultXmlService` genera el XML `NOMFACTRES`.
 9. `ArtikosNominaResultItemWriter` envia `NOMFACTRES` si `dryRun=false`.
 10. `CONTROL_NOMINA` se actualiza con `OK`, `NOK` o `ERROR`.
@@ -55,14 +55,28 @@ La unidad principal del batch real es la nomina. Una nomina puede contener una c
 Los totales de `ResultadoNomina` se calculan dinamicamente desde el XML recibido:
 
 - `totalDocuments`: cantidad real de documentos.
-- `totalOk`: documentos procesados sin observaciones.
-- `totalNok`: documentos rechazados por reglas funcionales locales.
+- `totalOk`: documentos procesados sin observaciones locales o aceptados por Procurement.
+- `totalNok`: documentos rechazados por reglas funcionales locales o por `statusCode!=0` de Procurement.
 - `totalConciliaciones`: suma real de conciliaciones.
 - `totalDistribuciones`: suma real de distribuciones.
 
+## Procesamiento documental
+
+El procesamiento documental se resuelve por `DocumentProcessingService`:
+
+- `procurement.integration.enabled=false`: se usa `SimulatedDocumentProcessingService`, que conserva las validaciones locales existentes.
+- `procurement.integration.enabled=true`: se usa `ProcurementDocumentProcessingService`, que llama Procurement una vez por documento.
+
+La respuesta funcional de Procurement se interpreta asi:
+
+- `statusCode=0`: documento `OK`.
+- `statusCode!=0`: documento `NOK`, sin fallar el job.
+
+Los errores tecnicos de Procurement o errores de mapeo Artikos -> CMP fallan la nomina, marcan `CONTROL_NOMINA` como `ERROR` y evitan el envio de `NOMFACTRES`.
+
 ## Dry run
 
-Con `dryRun=true`, el servicio consulta Artikos y procesa localmente, pero no confirma recepcion ni envia resultado. Este modo sirve para validar parsing, reglas internas y resumen batch sin alterar estado en Artikos.
+Con `dryRun=true`, el servicio consulta Artikos y procesa siempre con la ruta simulada/local, aunque `procurement.integration.enabled=true`. No confirma recepcion, no envia resultado y no llama Procurement. Este modo sirve para validar parsing, reglas internas y resumen batch sin alterar estado en Artikos ni en sistemas externos.
 
 ## Errores funcionales
 

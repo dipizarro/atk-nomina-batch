@@ -2,7 +2,7 @@
 
 ## Proposito del servicio
 
-`atk-nomina-batch` procesa nominas de documentos contables disponibles en Artikos. El servicio consulta nominas con `NOMFACTERP`, confirma recepcion con `NOMFACTCONFIR`, procesa documentos localmente, envia resultados con `NOMFACTRES` y registra el control funcional en `CONTROL_NOMINA`.
+`atk-nomina-batch` procesa nominas de documentos contables disponibles en Artikos. El servicio consulta nominas con `NOMFACTERP`, confirma recepcion con `NOMFACTCONFIR`, procesa documentos localmente o contra Procurement segun configuracion, envia resultados con `NOMFACTRES` y registra el control funcional en `CONTROL_NOMINA`.
 
 La metadata tecnica del job queda en las tablas Spring Batch `BATCH_*`.
 

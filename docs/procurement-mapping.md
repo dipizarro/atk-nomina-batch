@@ -41,7 +41,7 @@ La estrategia inicial es uno a uno:
 
 - un `DocumentoContable` Artikos genera un request Procurement CMP;
 - cada `DistribucionContable` Artikos genera una linea `CMP_DOCUMT_DET`;
-- `CMP_DOCUMT_DET_RUT` queda como estructura minima hasta validar contrato final con Procurement.
+- `CMP_DOCUMT_DET_RUT` se completa con el RUT proveedor y vigencia activa para cumplir el contrato real de Procurement.
 
 ## Campos por profile
 
@@ -62,19 +62,23 @@ procurement.mapping.company-by-profile.VIDA=001
 | Procurement | Valor |
 | --- | --- |
 | Raiz `COD_TIP_DOCUMT` | `CMP` |
-| `CMP_DOCUMT.COD_TIP_DOCUMT` | `CMP` |
+| `CMP_DOCUMT.COD_TIP_DOCUMT` | `FEC` |
 | `CMP_DOCUMT.COD_SISTEM` | `CM` |
+| `CMP_DOCUMT.COD_TIP_CUENTA` | `2` por defecto |
+| `CMP_DOCUMT_DET.COD_TIP_CUENTA` | `2` por defecto |
+| `CMP_DOCUMT_DET_RUT.A_IND_VIGE` | `V` |
 | `HNR` | `null` |
 
-Aunque Artikos trae `Tipo_Documento` y `Tipo_ERP`, para esta integracion se mantiene `CMP` como tipo de documento Procurement.
+Aunque Artikos trae `Tipo_Documento` y `Tipo_ERP`, para esta integracion la raiz indica el tipo de payload `CMP`, mientras `CMP_DOCUMT.COD_TIP_DOCUMT` identifica el tipo interno `FEC`.
 
 ## Campos directos desde Artikos
 
 | Artikos | Procurement | Regla |
 | --- | --- | --- |
 | `Documento.Rut_Proveedor` | `CMP_DOCUMT.NUM_RUT` | RUT sin digito verificador. Ejemplo: `96670840-9` -> `96670840`. |
+| `Documento.Rut_Proveedor` | `CMP_DOCUMT_DET_RUT.CMP_NUM_RUT` | Se envia el mismo RUT proveedor sin digito verificador. |
+| `Documento.Rut_Proveedor` | `CMP_DOCUMT_DET_RUT.NUM_RUT` | Se envia el mismo RUT proveedor sin digito verificador. |
 | `Documento.Numero_Documento` | `CMP_DOCUMT.NUM_DOCCMP` | Valor directo. |
-| `Documento.DocCurrency` | `CMP_DOCUMT.COD_MONEDA` | Si no viene, usar `procurement.mapping.default-currency`. |
 | `Documento.Fecha_Emision` | `CMP_DOCUMT.FEC_EMIDCM` | Formato de salida `yyyy-MM-dd`. |
 | `Documento.Fecha_Emision` | `CMP_DOCUMT.FEC_COMPRB` | Regla temporal hasta confirmar fuente ASI. |
 | `Documento.Fecha_Vencimiento` | `CMP_DOCUMT.FEC_VNCCTA` | Si no viene, usar `Fecha_Emision`. |
@@ -82,9 +86,11 @@ Aunque Artikos trae `Tipo_Documento` y `Tipo_ERP`, para esta integracion se mant
 | `Documento.Monto_Neto` | `CMP_DOCUMT.MTO_TOT_NTODIG` | Valor directo, `0` si viene nulo. |
 | `Documento.Monto_Exento` | `CMP_DOCUMT.MTO_TOT_EXNDIG` | Valor directo, `0` si viene nulo. |
 | `Documento.Monto_IVA` | `CMP_DOCUMT.MTO_TOT_IVADIG` | Valor directo, `0` si viene nulo. |
+| `Documento.Monto_Total` | `CMP_DOCUMT.MTO_TOT_DOCDIG` | Valor directo, `0` si viene nulo. |
+| `Documento.Numero_Documento` | `CMP_DOCUMT.NUM_FOL_DOCUMT` | Valor numerico del folio/documento. |
 | `Distribucion.Cod_CuentaContable` | `CMP_DOCUMT.COD_CUENTA` | Primera cuenta contable disponible en distribuciones. |
+| `Distribucion.Cod_CuentaContable` | `CMP_DOCUMT_DET.COD_CUENTA` | Valor directo por linea; requerido por `ASI.CMP_DOCUMT_DET`. |
 | `Distribucion.Cod_CentroCosto` | `CMP_DOCUMT_DET.COD_CCOSTO` | Valor directo. |
-| `Distribucion.ItemDescription` | `CMP_DOCUMT_DET.GLS_LINEA` | Si no viene, usar glosa de documento. |
 | `Distribucion.Monto_Neto` | `CMP_DOCUMT_DET.MTO_NETO` | Valor directo, `0` si viene nulo. |
 | `Distribucion.Monto_Exento` | `CMP_DOCUMT_DET.MTO_EXENTO` | Valor directo, `0` si viene nulo. |
 | `Distribucion.Monto_IVA` | `CMP_DOCUMT_DET.MTO_IVACLC` | Valor directo, `0` si viene nulo. |
@@ -94,19 +100,22 @@ Aunque Artikos trae `Tipo_Documento` y `Tipo_ERP`, para esta integracion se mant
 
 | Property | Procurement | Nota |
 | --- | --- | --- |
-| `procurement.mapping.document-type` | `COD_TIP_DOCUMT`, `CMP_DOCUMT.COD_TIP_DOCUMT` | Default `CMP`. |
+| `procurement.mapping.document-type` | Raiz `COD_TIP_DOCUMT` | Default `CMP`. |
+| `procurement.mapping.cmp-document-type` | `CMP_DOCUMT.COD_TIP_DOCUMT` | Default `FEC`. |
 | `procurement.mapping.cod-sistem` | `CMP_DOCUMT.COD_SISTEM` | Default `CM`. |
 | `procurement.mapping.num-periodo` | `CMP_DOCUMT.NUM_PERIODO` | Debe validarse contra periodo abierto ASI. |
 | `procurement.mapping.cod-contbl` | `CMP_DOCUMT.COD_CONTBL` | Pendiente confirmar valor real. |
+| `procurement.mapping.cod-tip-cuenta` | `CMP_DOCUMT.COD_TIP_CUENTA`, `CMP_DOCUMT_DET.COD_TIP_CUENTA` | Default `2`, alineado con el helper actual de Procurement. |
 | `procurement.mapping.cod-tip-unid` | `CMP_DOCUMT_DET.COD_TIP_UNID` | Pendiente confirmar valor real. |
 | `procurement.mapping.grl-cod-item` | `CMP_DOCUMT_DET.GRL_COD_ITEM` | Pendiente confirmar valor real. |
+| `procurement.mapping.line-gloss` | `CMP_DOCUMT_DET.GLS_LINEA` | Default `BENEFICIOS AL PERSONAL`. Siempre se usa este valor para respetar largo maximo Oracle. |
 | `procurement.mapping.val-tip-cambio` | `CMP_DOCUMT_DET.VAL_TIP_CAMBIO` | Default `1`. |
 | `procurement.mapping.pct-dscnto` | `CMP_DOCUMT_DET.PCT_DSCNTO` | Default `0`. |
 | `procurement.mapping.mto-dscnto` | `CMP_DOCUMT_DET.MTO_DSCNTO` | Default `0`. |
 | `procurement.mapping.pct-iva` | `CMP_DOCUMT_DET.PCT_IVA` | Default `19`. |
 | `procurement.mapping.codigo-rec-iva` | `CMP_DOCUMT.CODIGO_REC_IVA` | Pendiente confirmar valor real. |
 | `procurement.mapping.default-cantidad` | `CMP_DOCUMT_DET.NUM_CANTDD` | Default `1`. |
-| `procurement.mapping.default-currency` | `CMP_DOCUMT.COD_MONEDA` | Default `CLP`. |
+| `procurement.mapping.default-currency` | `CMP_DOCUMT.COD_MONEDA` | Default `CLP`. Siempre se usa este valor, aunque Artikos informe `DocCurrency`. |
 
 Si falta una property obligatoria, el mapper lanza `ProcurementMappingException` con el nombre de la property.
 
@@ -122,8 +131,8 @@ Si falta una property obligatoria, el mapper lanza `ProcurementMappingException`
 
 ## Pendientes
 
-- Validar contrato final de `CMP_DOCUMT_DET_RUT`.
 - Validar valor definitivo de `COD_CONTBL`.
+- Validar valor definitivo de `COD_TIP_CUENTA`.
 - Validar valor definitivo de `COD_TIP_UNID`.
 - Validar valor definitivo de `GRL_COD_ITEM`.
 - Validar `NUM_PERIODO` contra periodo abierto ASI.

@@ -10,12 +10,15 @@ public class ProcurementMappingValidator {
 
     public void validate(ArtikosProfileType profile, ProcurementMappingProperties properties) {
         requireText(properties.getDocumentType(), "procurement.mapping.document-type");
+        requireText(properties.getCmpDocumentType(), "procurement.mapping.cmp-document-type");
         requireText(properties.getCodSistem(), "procurement.mapping.cod-sistem");
         requireText(company(profile, properties), "procurement.mapping.company-by-profile." + profile.name());
         requireValue(properties.getNumPeriodo(), "procurement.mapping.num-periodo");
         requireText(properties.getCodContbl(), "procurement.mapping.cod-contbl");
+        requireText(properties.getCodTipCuenta(), "procurement.mapping.cod-tip-cuenta");
         requireText(properties.getCodTipUnid(), "procurement.mapping.cod-tip-unid");
         requireText(properties.getGrlCodItem(), "procurement.mapping.grl-cod-item");
+        requireText(properties.getLineGloss(), "procurement.mapping.line-gloss");
         requireValue(properties.getValTipCambio(), "procurement.mapping.val-tip-cambio");
         requireValue(properties.getPctDscnto(), "procurement.mapping.pct-dscnto");
         requireValue(properties.getMtoDscnto(), "procurement.mapping.mto-dscnto");

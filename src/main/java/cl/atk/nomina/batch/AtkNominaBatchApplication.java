@@ -7,6 +7,7 @@ import cl.atk.nomina.batch.config.AppConfigValidationProperties;
 import cl.atk.nomina.batch.config.AppDiagnosticsProperties;
 import cl.atk.nomina.batch.config.BatchExecutionProperties;
 import cl.atk.nomina.batch.procurement.config.ProcurementClientProperties;
+import cl.atk.nomina.batch.procurement.config.ProcurementIntegrationProperties;
 import cl.atk.nomina.batch.procurement.config.ProcurementMappingProperties;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -21,6 +22,7 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
         AppConfigValidationProperties.class,
         BatchExecutionProperties.class,
         ProcurementClientProperties.class,
+        ProcurementIntegrationProperties.class,
         ProcurementMappingProperties.class
 })
 public class AtkNominaBatchApplication {
