@@ -114,6 +114,8 @@ La unidad principal del batch sigue siendo la nomina. Procurement se invoca docu
 
 Si `NOMFACTCONFIR` es rechazado, el processor marca `CONTROL_NOMINA` como `ERROR`, falla el job y no ejecuta Procurement para esa nomina.
 
+En modo `artikos.source.mode=local-xml`, el batch toma la nomina desde XML local, omite llamadas reales a `NOMFACTERP`, `NOMFACTCONFIR` y `NOMFACTRES`, pero puede llamar Procurement si `procurement.integration.enabled=true` y `procurement.client.enabled=true`. Ver `docs/local-e2e-testing.md`.
+
 ## Politica funcional
 
 - Documento aceptado por Procurement: `statusCode=0`, `ResultadoDocumento.status=OK`.

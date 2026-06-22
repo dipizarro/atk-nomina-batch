@@ -1,5 +1,7 @@
 package cl.atk.nomina.batch.batch.processor;
 
+import cl.atk.nomina.batch.config.ArtikosOutboundProperties;
+import cl.atk.nomina.batch.config.ArtikosSourceProperties;
 import cl.atk.nomina.batch.domain.ResultadoNomina;
 import cl.atk.nomina.batch.domain.artikos.ArtikosOperation;
 import cl.atk.nomina.batch.domain.artikos.ArtikosFetchedNomina;
@@ -27,6 +29,8 @@ public class ArtikosNominaItemProcessor implements ItemProcessor<ArtikosFetchedN
     private final NominaProcessingService nominaProcessingService;
     private final NominaErrorPolicyService errorPolicyService;
     private final NominaReprocessingPolicyService reprocessingPolicyService;
+    private final ArtikosSourceProperties sourceProperties;
+    private final ArtikosOutboundProperties outboundProperties;
     private final Long jobExecutionId;
     private final boolean dryRun;
 
@@ -37,6 +41,8 @@ public class ArtikosNominaItemProcessor implements ItemProcessor<ArtikosFetchedN
             NominaProcessingService nominaProcessingService,
             NominaErrorPolicyService errorPolicyService,
             NominaReprocessingPolicyService reprocessingPolicyService,
+            ArtikosSourceProperties sourceProperties,
+            ArtikosOutboundProperties outboundProperties,
             Long jobExecutionId,
             String dryRun) {
         this.controlNominaService = controlNominaService;
@@ -45,6 +51,8 @@ public class ArtikosNominaItemProcessor implements ItemProcessor<ArtikosFetchedN
         this.nominaProcessingService = nominaProcessingService;
         this.errorPolicyService = errorPolicyService;
         this.reprocessingPolicyService = reprocessingPolicyService;
+        this.sourceProperties = sourceProperties;
+        this.outboundProperties = outboundProperties;
         this.jobExecutionId = jobExecutionId;
         this.dryRun = Boolean.parseBoolean(dryRun);
     }
@@ -77,26 +85,7 @@ public class ArtikosNominaItemProcessor implements ItemProcessor<ArtikosFetchedN
                     jobExecutionId, numeroNomina, item.profile());
             markProcessing(item);
 
-            LoggingContext.putOperation(ArtikosOperation.NOMFACTCONFIR.name());
-            LOGGER.info("Sending Artikos confirmation profile={} numeroNomina={}", item.profile(), numeroNomina);
-            String confirmationRawXml = soapClient.confirmNominaRawXml(item.profile(), numeroNomina, 0);
-            ArtikosGenericResponse confirmationResponse = genericResponseParser.parseGenericResponse(confirmationRawXml);
-            if (!confirmationResponse.success()) {
-                String message = "Confirmacion Artikos rechazada: " + confirmationResponse.messageText();
-                LOGGER.warn("Artikos confirmation error profile={} numeroNomina={} msgStatus={} message={}",
-                        item.profile(), numeroNomina, confirmationResponse.msgStatus(), confirmationResponse.messageText());
-                ArtikosIntegrationException exception = new ArtikosIntegrationException(
-                        IntegrationErrorType.NOMINA_CONFIRM_ERROR,
-                        item.profile().name(),
-                        numeroNomina,
-                        ArtikosOperation.NOMFACTCONFIR.name(),
-                        message,
-                        null);
-                markControlErrorIfRequired(exception);
-                throw exception;
-            }
-            LOGGER.info("Artikos confirmation OK profile={} numeroNomina={}", item.profile(), numeroNomina);
-            LoggingContext.clearOperation();
+            confirmNominaIfEnabled(item, numeroNomina);
 
             return processNomina(item, false);
         } catch (ArtikosIntegrationException exception) {
@@ -155,6 +144,39 @@ public class ArtikosNominaItemProcessor implements ItemProcessor<ArtikosFetchedN
 
     private String currentOperation() {
         return LoggingContext.snapshot().get("operation");
+    }
+
+    private void confirmNominaIfEnabled(ArtikosFetchedNomina item, Long numeroNomina) {
+        if (sourceProperties.isLocalXmlMode() || !outboundProperties.isConfirmEnabled()) {
+            LOGGER.warn("Skipping Artikos NOMFACTCONFIR because local XML mode or confirm disabled is active "
+                            + "profile={} numeroNomina={} sourceMode={} confirmEnabled={}",
+                    item.profile(), numeroNomina, sourceProperties.getMode(), outboundProperties.isConfirmEnabled());
+            return;
+        }
+
+        LoggingContext.putOperation(ArtikosOperation.NOMFACTCONFIR.name());
+        try {
+            LOGGER.info("Sending Artikos confirmation profile={} numeroNomina={}", item.profile(), numeroNomina);
+            String confirmationRawXml = soapClient.confirmNominaRawXml(item.profile(), numeroNomina, 0);
+            ArtikosGenericResponse confirmationResponse = genericResponseParser.parseGenericResponse(confirmationRawXml);
+            if (!confirmationResponse.success()) {
+                String message = "Confirmacion Artikos rechazada: " + confirmationResponse.messageText();
+                LOGGER.warn("Artikos confirmation error profile={} numeroNomina={} msgStatus={} message={}",
+                        item.profile(), numeroNomina, confirmationResponse.msgStatus(), confirmationResponse.messageText());
+                ArtikosIntegrationException exception = new ArtikosIntegrationException(
+                        IntegrationErrorType.NOMINA_CONFIRM_ERROR,
+                        item.profile().name(),
+                        numeroNomina,
+                        ArtikosOperation.NOMFACTCONFIR.name(),
+                        message,
+                        null);
+                markControlErrorIfRequired(exception);
+                throw exception;
+            }
+            LOGGER.info("Artikos confirmation OK profile={} numeroNomina={}", item.profile(), numeroNomina);
+        } finally {
+            LoggingContext.clearOperation();
+        }
     }
 
     private ResultadoNomina processNomina(ArtikosFetchedNomina item, boolean forceSimulatedProcessing) {

@@ -10,10 +10,13 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import cl.atk.nomina.batch.artikos.source.ArtikosNominaSource;
 import cl.atk.nomina.batch.batch.processor.ArtikosNominaItemProcessor;
 import cl.atk.nomina.batch.batch.processor.NominaDocumentoItemProcessor;
 import cl.atk.nomina.batch.batch.reader.ArtikosNominaItemReader;
 import cl.atk.nomina.batch.batch.writer.ArtikosNominaResultItemWriter;
+import cl.atk.nomina.batch.config.ArtikosOutboundProperties;
+import cl.atk.nomina.batch.config.ArtikosSourceProperties;
 import cl.atk.nomina.batch.domain.Conciliacion;
 import cl.atk.nomina.batch.domain.DistribucionContable;
 import cl.atk.nomina.batch.domain.DocumentoContable;
@@ -34,7 +37,6 @@ import cl.atk.nomina.batch.service.NominaXmlParserService;
 import cl.atk.nomina.batch.service.SimulatedDocumentProcessingService;
 import cl.atk.nomina.batch.service.artikos.ArtikosGenericSoapResponseParser;
 import cl.atk.nomina.batch.service.artikos.ArtikosSoapClient;
-import cl.atk.nomina.batch.service.artikos.ArtikosSoapResponseParser;
 import cl.atk.nomina.batch.shared.exception.ArtikosIntegrationException;
 import org.junit.jupiter.api.Test;
 import org.springframework.batch.item.Chunk;
@@ -44,6 +46,7 @@ import org.springframework.util.StreamUtils;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.Optional;
 
 class ArtikosBatchFlowTest {
 
@@ -51,12 +54,12 @@ class ArtikosBatchFlowTest {
             new ClassPathResource("samples/ZSVIDA_Nom15960.xml"));
 
     @Test
-    void readerReturnsNominaWhenArtikosRespondsWithXml() throws Exception {
-        ArtikosSoapClient soapClient = mock(ArtikosSoapClient.class);
-        when(soapClient.fetchNominaRawXml(ArtikosProfileType.VIDA)).thenReturn(sampleNominaXml());
+    void readerReturnsNominaWhenArtikosSourceReturnsXml() {
+        ArtikosNominaSource source = mock(ArtikosNominaSource.class);
+        when(source.fetchNextNomina(ArtikosProfileType.VIDA)).thenReturn(Optional.of(sampleNomina()));
         ArtikosNominaItemReader reader = new ArtikosNominaItemReader(
-                soapClient,
-                new ArtikosSoapResponseParser(nominaXmlParserService),
+                source,
+                remoteSourceProperties(),
                 "VIDA",
                 1L,
                 "true");
@@ -71,11 +74,11 @@ class ArtikosBatchFlowTest {
 
     @Test
     void readerReturnsNullWhenArtikosHasNoNominas() {
-        ArtikosSoapClient soapClient = mock(ArtikosSoapClient.class);
-        when(soapClient.fetchNominaRawXml(ArtikosProfileType.GENERALES)).thenReturn(noNominasXml());
+        ArtikosNominaSource source = mock(ArtikosNominaSource.class);
+        when(source.fetchNextNomina(ArtikosProfileType.GENERALES)).thenReturn(Optional.empty());
         ArtikosNominaItemReader reader = new ArtikosNominaItemReader(
-                soapClient,
-                new ArtikosSoapResponseParser(nominaXmlParserService),
+                source,
+                remoteSourceProperties(),
                 "GENERALES",
                 1L,
                 "true");
@@ -84,13 +87,13 @@ class ArtikosBatchFlowTest {
     }
 
     @Test
-    void readerReadsSeveralNominasUntilArtikosHasNoNominas() throws Exception {
-        ArtikosSoapClient soapClient = mock(ArtikosSoapClient.class);
-        when(soapClient.fetchNominaRawXml(ArtikosProfileType.VIDA))
-                .thenReturn(sampleNominaXml(), sampleNominaXml(), noNominasXml());
+    void readerReadsSeveralNominasUntilArtikosHasNoNominas() {
+        ArtikosNominaSource source = mock(ArtikosNominaSource.class);
+        when(source.fetchNextNomina(ArtikosProfileType.VIDA))
+                .thenReturn(Optional.of(sampleNomina()), Optional.of(sampleNomina()), Optional.empty());
         ArtikosNominaItemReader reader = new ArtikosNominaItemReader(
-                soapClient,
-                new ArtikosSoapResponseParser(nominaXmlParserService),
+                source,
+                remoteSourceProperties(),
                 "VIDA",
                 10L,
                 "true");
@@ -98,32 +101,32 @@ class ArtikosBatchFlowTest {
         assertThat(reader.read()).isNotNull();
         assertThat(reader.read()).isNotNull();
         assertThat(reader.read()).isNull();
-        verify(soapClient, times(3)).fetchNominaRawXml(ArtikosProfileType.VIDA);
+        verify(source, times(3)).fetchNextNomina(ArtikosProfileType.VIDA);
     }
 
     @Test
-    void readerRespectsMaxNominas() throws Exception {
-        ArtikosSoapClient soapClient = mock(ArtikosSoapClient.class);
-        when(soapClient.fetchNominaRawXml(ArtikosProfileType.VIDA)).thenReturn(sampleNominaXml());
+    void readerRespectsMaxNominas() {
+        ArtikosNominaSource source = mock(ArtikosNominaSource.class);
+        when(source.fetchNextNomina(ArtikosProfileType.VIDA)).thenReturn(Optional.of(sampleNomina()));
         ArtikosNominaItemReader reader = new ArtikosNominaItemReader(
-                soapClient,
-                new ArtikosSoapResponseParser(nominaXmlParserService),
+                source,
+                remoteSourceProperties(),
                 "VIDA",
                 1L,
                 "true");
 
         assertThat(reader.read()).isNotNull();
         assertThat(reader.read()).isNull();
-        verify(soapClient).fetchNominaRawXml(ArtikosProfileType.VIDA);
+        verify(source).fetchNextNomina(ArtikosProfileType.VIDA);
     }
 
     @Test
-    void readerStopsAtMaxNominasEvenWhenArtikosStillHasNominas() throws Exception {
-        ArtikosSoapClient soapClient = mock(ArtikosSoapClient.class);
-        when(soapClient.fetchNominaRawXml(ArtikosProfileType.VIDA)).thenReturn(sampleNominaXml());
+    void readerStopsAtMaxNominasEvenWhenArtikosStillHasNominas() {
+        ArtikosNominaSource source = mock(ArtikosNominaSource.class);
+        when(source.fetchNextNomina(ArtikosProfileType.VIDA)).thenReturn(Optional.of(sampleNomina()));
         ArtikosNominaItemReader reader = new ArtikosNominaItemReader(
-                soapClient,
-                new ArtikosSoapResponseParser(nominaXmlParserService),
+                source,
+                remoteSourceProperties(),
                 "VIDA",
                 2L,
                 "true");
@@ -131,7 +134,7 @@ class ArtikosBatchFlowTest {
         assertThat(reader.read()).isNotNull();
         assertThat(reader.read()).isNotNull();
         assertThat(reader.read()).isNull();
-        verify(soapClient, times(2)).fetchNominaRawXml(ArtikosProfileType.VIDA);
+        verify(source, times(2)).fetchNextNomina(ArtikosProfileType.VIDA);
     }
 
     @Test
@@ -220,6 +223,8 @@ class ArtikosBatchFlowTest {
                 nominaProcessingService,
                 new NominaErrorPolicyService(),
                 reprocessingPolicy(true),
+                remoteSourceProperties(),
+                outboundProperties(true, true),
                 7L,
                 "false");
 
@@ -339,6 +344,31 @@ class ArtikosBatchFlowTest {
     }
 
     @Test
+    void processorSkipsConfirmationWhenLocalXmlModeIsActive() {
+        ControlNominaService controlNominaService = mock(ControlNominaService.class);
+        ArtikosSoapClient soapClient = mock(ArtikosSoapClient.class);
+        ArtikosGenericSoapResponseParser genericParser = mock(ArtikosGenericSoapResponseParser.class);
+        when(soapClient.resultadoNominaConfig(ArtikosProfileType.VIDA)).thenReturn(resultadoOperationConfig());
+        ArtikosNominaItemProcessor processor = new ArtikosNominaItemProcessor(
+                controlNominaService,
+                soapClient,
+                genericParser,
+                simulatedNominaProcessingService(),
+                new NominaErrorPolicyService(),
+                reprocessingPolicy(false),
+                localXmlSourceProperties(),
+                outboundProperties(true, true),
+                7L,
+                "false");
+
+        ResultadoNomina result = processor.process(fetchedNomina(false));
+
+        assertThat(result.totalOk()).isEqualTo(1);
+        verify(controlNominaService).markProcessing(7L, 15960L);
+        verify(soapClient, never()).confirmNominaRawXml(any(), any(), any());
+    }
+
+    @Test
     void processorCalculatesTotalsFromVariableNominaContent() {
         ControlNominaService controlNominaService = mock(ControlNominaService.class);
         ArtikosSoapClient soapClient = mock(ArtikosSoapClient.class);
@@ -395,6 +425,23 @@ class ArtikosBatchFlowTest {
     }
 
     @Test
+    void writerDoesNotSendNomfactresWhenLocalXmlModeIsActive() {
+        ArtikosSoapClient soapClient = mock(ArtikosSoapClient.class);
+        ArtikosGenericSoapResponseParser genericParser = mock(ArtikosGenericSoapResponseParser.class);
+        ControlNominaService controlNominaService = mock(ControlNominaService.class);
+        BatchResultStore store = mock(BatchResultStore.class);
+        ResultadoNomina result = resultadoNomina();
+        ArtikosNominaResultItemWriter writer = writer(
+                soapClient, genericParser, controlNominaService, store, "false", localXmlSourceProperties());
+
+        writer.write(Chunk.of(result));
+
+        verify(soapClient, never()).sendNominaResultRawXml(any(), any());
+        verify(controlNominaService).markCompleted(result);
+        verify(store).addNominaResults(eq(7L), any());
+    }
+
+    @Test
     void writerMarksErrorWhenNomfactresFails() {
         ArtikosSoapClient soapClient = mock(ArtikosSoapClient.class);
         ArtikosGenericSoapResponseParser genericParser = mock(ArtikosGenericSoapResponseParser.class);
@@ -436,6 +483,8 @@ class ArtikosBatchFlowTest {
                 nominaProcessingService,
                 new NominaErrorPolicyService(),
                 reprocessingPolicy(false),
+                remoteSourceProperties(),
+                outboundProperties(true, true),
                 7L,
                 dryRun);
     }
@@ -447,25 +496,57 @@ class ArtikosBatchFlowTest {
         return service;
     }
 
+    private ArtikosSourceProperties remoteSourceProperties() {
+        ArtikosSourceProperties properties = new ArtikosSourceProperties();
+        properties.setMode(ArtikosSourceProperties.MODE_REMOTE);
+        return properties;
+    }
+
+    private ArtikosSourceProperties localXmlSourceProperties() {
+        ArtikosSourceProperties properties = new ArtikosSourceProperties();
+        properties.setMode(ArtikosSourceProperties.MODE_LOCAL_XML);
+        properties.setLocalXmlPath("classpath:samples/artikos/ZSVIDA_Nom15960.xml");
+        return properties;
+    }
+
+    private ArtikosOutboundProperties outboundProperties(boolean confirmEnabled, boolean resultEnabled) {
+        ArtikosOutboundProperties properties = new ArtikosOutboundProperties();
+        properties.getConfirm().setEnabled(confirmEnabled);
+        properties.getResult().setEnabled(resultEnabled);
+        return properties;
+    }
+
     private ArtikosNominaResultItemWriter writer(
             ArtikosSoapClient soapClient,
             ArtikosGenericSoapResponseParser genericParser,
             ControlNominaService controlNominaService,
             BatchResultStore store,
             String dryRun) {
+        return writer(soapClient, genericParser, controlNominaService, store, dryRun, remoteSourceProperties());
+    }
+
+    private ArtikosNominaResultItemWriter writer(
+            ArtikosSoapClient soapClient,
+            ArtikosGenericSoapResponseParser genericParser,
+            ControlNominaService controlNominaService,
+            BatchResultStore store,
+            String dryRun,
+            ArtikosSourceProperties sourceProperties) {
         return new ArtikosNominaResultItemWriter(
                 soapClient,
                 genericParser,
                 controlNominaService,
                 new NominaErrorPolicyService(),
                 store,
+                sourceProperties,
+                outboundProperties(true, true),
                 "VIDA",
                 dryRun,
                 7L);
     }
 
     private ArtikosFetchedNomina fetchedNomina(boolean dryRun) {
-        Nomina nomina = nominaXmlParserService.parseSampleFile();
+        Nomina nomina = sampleNomina();
         return new ArtikosFetchedNomina(
                 ArtikosProfileType.VIDA,
                 nomina,
@@ -474,6 +555,10 @@ class ArtikosBatchFlowTest {
                 nomina.cabecera().cantidadDocumentos(),
                 "<raw/>",
                 dryRun);
+    }
+
+    private Nomina sampleNomina() {
+        return nominaXmlParserService.parseSampleFile();
     }
 
     private ArtikosFetchedNomina fetchedNominaWithZeroTotal(boolean dryRun) {

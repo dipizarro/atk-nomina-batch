@@ -1,5 +1,6 @@
 package cl.atk.nomina.batch.batch.config;
 
+import cl.atk.nomina.batch.artikos.source.ArtikosNominaSource;
 import cl.atk.nomina.batch.batch.processor.ArtikosNominaItemProcessor;
 import cl.atk.nomina.batch.batch.processor.NominaItemProcessor;
 import cl.atk.nomina.batch.batch.processor.NominaDocumentoItemProcessor;
@@ -8,6 +9,8 @@ import cl.atk.nomina.batch.batch.reader.NominaItemReader;
 import cl.atk.nomina.batch.batch.reader.NominaDocumentoItemReader;
 import cl.atk.nomina.batch.batch.writer.ArtikosNominaResultItemWriter;
 import cl.atk.nomina.batch.batch.writer.NominaResultItemWriter;
+import cl.atk.nomina.batch.config.ArtikosOutboundProperties;
+import cl.atk.nomina.batch.config.ArtikosSourceProperties;
 import cl.atk.nomina.batch.domain.ResultadoDocumento;
 import cl.atk.nomina.batch.domain.ResultadoNomina;
 import cl.atk.nomina.batch.domain.SimulatedDocumentoContable;
@@ -86,12 +89,12 @@ public class NominaBatchJobConfig {
     @Bean
     @StepScope
     public ArtikosNominaItemReader artikosNominaItemReader(
-            ArtikosSoapClient soapClient,
-            ArtikosSoapResponseParser responseParser,
+            ArtikosNominaSource nominaSource,
+            ArtikosSourceProperties sourceProperties,
             @Value("#{jobParameters['profile']}") String profile,
             @Value("#{jobParameters['maxNominas']}") Long maxNominas,
             @Value("#{jobParameters['dryRun']}") String dryRun) {
-        return new ArtikosNominaItemReader(soapClient, responseParser, profile, maxNominas, dryRun);
+        return new ArtikosNominaItemReader(nominaSource, sourceProperties, profile, maxNominas, dryRun);
     }
 
     @Bean
@@ -103,6 +106,8 @@ public class NominaBatchJobConfig {
             NominaProcessingService nominaProcessingService,
             NominaErrorPolicyService errorPolicyService,
             NominaReprocessingPolicyService reprocessingPolicyService,
+            ArtikosSourceProperties sourceProperties,
+            ArtikosOutboundProperties outboundProperties,
             @Value("#{stepExecution.jobExecutionId}") Long jobExecutionId,
             @Value("#{jobParameters['dryRun']}") String dryRun) {
         return new ArtikosNominaItemProcessor(
@@ -112,6 +117,8 @@ public class NominaBatchJobConfig {
                 nominaProcessingService,
                 errorPolicyService,
                 reprocessingPolicyService,
+                sourceProperties,
+                outboundProperties,
                 jobExecutionId,
                 dryRun);
     }
@@ -124,6 +131,8 @@ public class NominaBatchJobConfig {
             ControlNominaService controlNominaService,
             NominaErrorPolicyService errorPolicyService,
             BatchResultStore batchResultStore,
+            ArtikosSourceProperties sourceProperties,
+            ArtikosOutboundProperties outboundProperties,
             @Value("#{jobParameters['profile']}") String profile,
             @Value("#{jobParameters['dryRun']}") String dryRun,
             @Value("#{stepExecution.jobExecutionId}") Long jobExecutionId) {
@@ -133,6 +142,8 @@ public class NominaBatchJobConfig {
                 controlNominaService,
                 errorPolicyService,
                 batchResultStore,
+                sourceProperties,
+                outboundProperties,
                 profile,
                 dryRun,
                 jobExecutionId);

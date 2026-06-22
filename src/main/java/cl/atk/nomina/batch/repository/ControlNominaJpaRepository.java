@@ -5,12 +5,24 @@ import cl.atk.nomina.batch.domain.ControlNominaId;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 public interface ControlNominaJpaRepository extends JpaRepository<ControlNominaEntity, ControlNominaId> {
 
     Optional<ControlNominaEntity> findByIdJobExecutionIdAndIdNumeroNomina(Long jobExecutionId, Long numeroNomina);
 
-    Optional<ControlNominaEntity> findTopByIdNumeroNominaOrderByCreatedAtDesc(Long numeroNomina);
+    @Query(value = """
+            SELECT *
+            FROM (
+                SELECT *
+                FROM CONTROL_NOMINA
+                WHERE NUMERO_NOMINA = :numeroNomina
+                ORDER BY CREATED_AT DESC
+            )
+            WHERE ROWNUM = 1
+            """, nativeQuery = true)
+    Optional<ControlNominaEntity> findLatestByNumeroNomina(@Param("numeroNomina") Long numeroNomina);
 
     List<ControlNominaEntity> findByIdJobExecutionId(Long jobExecutionId);
 

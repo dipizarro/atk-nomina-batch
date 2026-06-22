@@ -1,13 +1,13 @@
 package cl.atk.nomina.batch.batch.reader;
 
+import cl.atk.nomina.batch.artikos.source.ArtikosNominaSource;
+import cl.atk.nomina.batch.config.ArtikosSourceProperties;
 import cl.atk.nomina.batch.domain.Nomina;
 import cl.atk.nomina.batch.domain.artikos.ArtikosOperation;
 import cl.atk.nomina.batch.domain.artikos.ArtikosFetchedNomina;
 import cl.atk.nomina.batch.domain.artikos.ArtikosProfileType;
 import cl.atk.nomina.batch.domain.error.IntegrationErrorType;
-import cl.atk.nomina.batch.service.artikos.ArtikosSoapClient;
 import cl.atk.nomina.batch.service.artikos.ArtikosSoapClientException;
-import cl.atk.nomina.batch.service.artikos.ArtikosSoapResponseParser;
 import cl.atk.nomina.batch.shared.exception.ArtikosIntegrationException;
 import cl.atk.nomina.batch.shared.exception.NominaXmlParsingException;
 import cl.atk.nomina.batch.shared.logging.LoggingContext;
@@ -20,21 +20,21 @@ public class ArtikosNominaItemReader implements ItemReader<ArtikosFetchedNomina>
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ArtikosNominaItemReader.class);
 
-    private final ArtikosSoapClient soapClient;
-    private final ArtikosSoapResponseParser responseParser;
+    private final ArtikosNominaSource nominaSource;
+    private final ArtikosSourceProperties sourceProperties;
     private final ArtikosProfileType profile;
     private final long maxNominas;
     private final boolean dryRun;
     private long fetchedCount;
 
     public ArtikosNominaItemReader(
-            ArtikosSoapClient soapClient,
-            ArtikosSoapResponseParser responseParser,
+            ArtikosNominaSource nominaSource,
+            ArtikosSourceProperties sourceProperties,
             String profile,
             Long maxNominas,
             String dryRun) {
-        this.soapClient = soapClient;
-        this.responseParser = responseParser;
+        this.nominaSource = nominaSource;
+        this.sourceProperties = sourceProperties;
         this.profile = ArtikosProfileType.from(profile);
         this.maxNominas = maxNominas == null ? Long.MAX_VALUE : maxNominas;
         this.dryRun = Boolean.parseBoolean(dryRun);
@@ -53,18 +53,12 @@ public class ArtikosNominaItemReader implements ItemReader<ArtikosFetchedNomina>
         }
 
         try {
-            LOGGER.info("Fetching Artikos nomina profile={} currentCount={} maxNominas={} dryRun={}",
-                    profile, fetchedCount, maxNominas, dryRun);
-            String rawXml = soapClient.fetchNominaRawXml(profile);
-            if (responseParser.isNoNominasResponse(rawXml)) {
-                LOGGER.info("Artikos returned no nominas profile={} fetchedCount={} message={}",
-                        profile, fetchedCount, responseParser.extractNoNominasMessage(rawXml));
-                return null;
-            }
-
-            Optional<Nomina> parsedNomina = responseParser.extractNomina(rawXml);
+            LOGGER.info("Fetching Artikos nomina profile={} sourceMode={} currentCount={} maxNominas={} dryRun={}",
+                    profile, sourceProperties.getMode(), fetchedCount, maxNominas, dryRun);
+            Optional<Nomina> parsedNomina = nominaSource.fetchNextNomina(profile);
             if (parsedNomina.isEmpty()) {
-                LOGGER.info("Artikos response did not contain a nomina profile={}", profile);
+                LOGGER.info("Artikos source returned no nomina profile={} sourceMode={} fetchedCount={}",
+                        profile, sourceProperties.getMode(), fetchedCount);
                 return null;
             }
 
@@ -82,7 +76,7 @@ public class ArtikosNominaItemReader implements ItemReader<ArtikosFetchedNomina>
                     nomina.cabecera().numeroNomina(),
                     nomina.cabecera().tipoNomina(),
                     nomina.cabecera().cantidadDocumentos(),
-                    rawXml,
+                    "",
                     dryRun);
         } catch (ArtikosSoapClientException exception) {
             throw new ArtikosIntegrationException(

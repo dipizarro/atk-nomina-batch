@@ -123,7 +123,7 @@ public class ControlNominaService {
 
     @Transactional(readOnly = true)
     public Optional<ControlNominaEntity> findLatestByNumeroNomina(Long numeroNomina) {
-        return repository.findTopByIdNumeroNominaOrderByCreatedAtDesc(numeroNomina);
+        return repository.findLatestByNumeroNomina(numeroNomina);
     }
 
     private ControlNominaEntity createBaseEntity(Long jobExecutionId, Long numeroNomina) {

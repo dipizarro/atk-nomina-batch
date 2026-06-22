@@ -79,6 +79,12 @@ Notas operativas:
 - Si existe una ejecucion activa para el mismo perfil, el endpoint responde HTTP `409`.
 - Si `maxNominas` supera `atk.batch.max-nominas-per-run`, el endpoint responde HTTP `400`.
 
+## Modo local XML controlado
+
+Si QA Artikos no tiene nominas disponibles, se puede usar `artikos.source.mode=local-xml` solo en ambiente local/controlado para validar parser, procesamiento, Procurement, generacion de `NOMFACTRES` y `CONTROL_NOMINA`.
+
+En este modo no se consulta `NOMFACTERP`, no se confirma `NOMFACTCONFIR` y no se envia `NOMFACTRES` real a Artikos. La guia esta en `docs/local-e2e-testing.md`.
+
 ## Como consultar estado del batch
 
 Endpoint:

@@ -1,5 +1,7 @@
 package cl.atk.nomina.batch.batch.writer;
 
+import cl.atk.nomina.batch.config.ArtikosOutboundProperties;
+import cl.atk.nomina.batch.config.ArtikosSourceProperties;
 import cl.atk.nomina.batch.domain.ResultadoNomina;
 import cl.atk.nomina.batch.domain.artikos.ArtikosOperation;
 import cl.atk.nomina.batch.domain.artikos.ArtikosGenericResponse;
@@ -28,6 +30,8 @@ public class ArtikosNominaResultItemWriter implements ItemWriter<ResultadoNomina
     private final ControlNominaService controlNominaService;
     private final NominaErrorPolicyService errorPolicyService;
     private final BatchResultStore batchResultStore;
+    private final ArtikosSourceProperties sourceProperties;
+    private final ArtikosOutboundProperties outboundProperties;
     private final ArtikosProfileType profile;
     private final boolean dryRun;
     private final Long jobExecutionId;
@@ -38,6 +42,8 @@ public class ArtikosNominaResultItemWriter implements ItemWriter<ResultadoNomina
             ControlNominaService controlNominaService,
             NominaErrorPolicyService errorPolicyService,
             BatchResultStore batchResultStore,
+            ArtikosSourceProperties sourceProperties,
+            ArtikosOutboundProperties outboundProperties,
             String profile,
             String dryRun,
             Long jobExecutionId) {
@@ -46,6 +52,8 @@ public class ArtikosNominaResultItemWriter implements ItemWriter<ResultadoNomina
         this.controlNominaService = controlNominaService;
         this.errorPolicyService = errorPolicyService;
         this.batchResultStore = batchResultStore;
+        this.sourceProperties = sourceProperties;
+        this.outboundProperties = outboundProperties;
         this.profile = ArtikosProfileType.from(profile);
         this.dryRun = Boolean.parseBoolean(dryRun);
         this.jobExecutionId = jobExecutionId;
@@ -82,6 +90,22 @@ public class ArtikosNominaResultItemWriter implements ItemWriter<ResultadoNomina
     }
 
     private void sendResultToArtikos(ResultadoNomina result) {
+        if (sourceProperties.isLocalXmlMode() || !outboundProperties.isResultEnabled()) {
+            LOGGER.warn("Skipping Artikos NOMFACTRES send because local XML mode or result disabled is active "
+                            + "profile={} jobExecutionId={} numeroNomina={} sourceMode={} resultEnabled={}",
+                    profile,
+                    jobExecutionId,
+                    result.numeroNomina(),
+                    sourceProperties.getMode(),
+                    outboundProperties.isResultEnabled());
+            LOGGER.debug("Generated NOMFACTRES profile={} jobExecutionId={} numeroNomina={} xml={}",
+                    profile, jobExecutionId, result.numeroNomina(), result.nomfactresXml());
+            controlNominaService.markCompleted(result);
+            LOGGER.info("CONTROL_NOMINA updated without Artikos result send jobExecutionId={} numeroNomina={} status={}",
+                    jobExecutionId, result.numeroNomina(), result.status());
+            return;
+        }
+
         LoggingContext.putOperation(ArtikosOperation.NOMFACTRES.name());
         try {
             LOGGER.info("Sending NOMFACTRES to Artikos profile={} jobExecutionId={} numeroNomina={}",

@@ -84,6 +84,7 @@ Abordado parcialmente en Sprint 9.0:
 - Errores tecnicos/mapping Procurement marcan `CONTROL_NOMINA` como `ERROR` y fallan el job.
 - Idempotencia inicial implementada en Sprint 9.3 sin tabla adicional: `CONTROL_NOMINA` controla reproceso por nomina y duplicados Procurement conocidos se tratan como OK idempotente.
 - Respuesta real `statusCode=-20` de Procurement formalizada como OK idempotente en Sprint 9.3.1.
+- Modo `artikos.source.mode=local-xml` implementado para pruebas end-to-end tecnicas con XML local cuando QA Artikos no tenga nominas disponibles.
 
 Pendiente:
 
@@ -96,6 +97,8 @@ Pendiente:
 - Validar valores definitivos para `COD_CONTBL`, `COD_TIP_UNID`, `GRL_COD_ITEM` y `NUM_PERIODO`.
 - Revisar si `CONTROL_NOMINA` debe agregar empresa/profile en una evolucion futura para evitar ambiguedad por `NUMERO_NOMINA`.
 - Definir estados funcionales y reintentos finos para Procurement.
+- Validar funcionalmente el mapeo con nominas reales cuando Artikos QA vuelva a entregar documentos procesables.
+- Validar `NOMFACTCONFIR` y `NOMFACTRES` reales contra Artikos QA con nominas en estado correcto.
 
 ## Contrato REST y errores
 

@@ -2,7 +2,9 @@ package cl.atk.nomina.batch;
 
 import cl.atk.nomina.batch.config.ArtikosProperties;
 import cl.atk.nomina.batch.config.ArtikosHttpProperties;
+import cl.atk.nomina.batch.config.ArtikosOutboundProperties;
 import cl.atk.nomina.batch.config.ArtikosRetryProperties;
+import cl.atk.nomina.batch.config.ArtikosSourceProperties;
 import cl.atk.nomina.batch.config.AppConfigValidationProperties;
 import cl.atk.nomina.batch.config.AppDiagnosticsProperties;
 import cl.atk.nomina.batch.config.BatchExecutionProperties;
@@ -17,7 +19,9 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 @EnableConfigurationProperties({
         ArtikosProperties.class,
         ArtikosHttpProperties.class,
+        ArtikosOutboundProperties.class,
         ArtikosRetryProperties.class,
+        ArtikosSourceProperties.class,
         AppDiagnosticsProperties.class,
         AppConfigValidationProperties.class,
         BatchExecutionProperties.class,

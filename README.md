@@ -170,6 +170,21 @@ El mapeo actual construye el request CMP desde `DocumentoContable`, genera una l
 
 El detalle esta documentado en `docs/procurement-mapping.md` y `docs/procurement-integration.md`.
 
+## Local XML end-to-end testing
+
+Cuando QA Artikos no tiene nominas disponibles, se puede ejecutar el batch usando el XML local Artikos como fuente:
+
+```properties
+artikos.source.mode=local-xml
+artikos.source.local-xml-path=classpath:samples/artikos/ZSVIDA_Nom15960.xml
+artikos.confirm.enabled=false
+artikos.result.enabled=false
+```
+
+Este modo no consume `NOMFACTERP`, no confirma `NOMFACTCONFIR` y no envia `NOMFACTRES` real a Artikos. Si `procurement.integration.enabled=true`, si permite validar el envio tecnico a Procurement.
+
+Guia completa: `docs/local-e2e-testing.md`.
+
 ## Oracle
 
 Los scripts Oracle necesarios estan en:

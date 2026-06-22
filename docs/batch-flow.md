@@ -30,17 +30,21 @@ La respuesta es inmediata e incluye `jobExecutionId`, `jobName`, `status`, `prof
 
 ## Flujo operacional
 
-1. `ArtikosNominaItemReader` consulta Artikos con `NOMFACTERP`.
-2. Si Artikos retorna una nomina, el reader la entrega como un item del step.
-3. Si Artikos responde `No hay nominas para procesar`, el reader retorna `null` y el step termina normalmente.
-4. Si se alcanza `maxNominas`, el reader retorna `null`, registra el limite alcanzado y el step termina normalmente.
-5. `ArtikosNominaItemProcessor` registra `CONTROL_NOMINA` en `PROCESSING`.
-6. Si `dryRun=false`, se confirma recepcion con `NOMFACTCONFIR`.
-7. `NominaProcessingService` procesa todos los documentos reales de la nomina. Por defecto usa validaciones locales; si `procurement.integration.enabled=true`, envia cada documento a Procurement `POST /api/v1/document`.
-8. `NominaResultXmlService` genera el XML `NOMFACTRES`.
-9. `ArtikosNominaResultItemWriter` envia `NOMFACTRES` si `dryRun=false`.
-10. `CONTROL_NOMINA` se actualiza con `OK`, `NOK` o `ERROR`.
-11. `BatchResultStore` mantiene resultados en memoria para consultas operacionales del job.
+1. `ArtikosNominaItemReader` obtiene nominas desde la fuente configurada en `artikos.source.mode`.
+2. En modo `remote`, consulta Artikos con `NOMFACTERP`.
+3. En modo `local-xml`, lee una nomina desde `artikos.source.local-xml-path` y no consume Artikos real.
+4. Si Artikos retorna una nomina, el reader la entrega como un item del step.
+5. Si Artikos responde `No hay nominas para procesar`, el reader retorna `null` y el step termina normalmente.
+6. Si se alcanza `maxNominas`, el reader retorna `null`, registra el limite alcanzado y el step termina normalmente.
+7. `ArtikosNominaItemProcessor` registra `CONTROL_NOMINA` en `PROCESSING`.
+8. Si `dryRun=false` y el modo es `remote`, se confirma recepcion con `NOMFACTCONFIR`.
+9. En modo `local-xml`, se omite `NOMFACTCONFIR` aunque `artikos.confirm.enabled=true`.
+10. `NominaProcessingService` procesa todos los documentos reales de la nomina. Por defecto usa validaciones locales; si `procurement.integration.enabled=true`, envia cada documento a Procurement `POST /api/v1/document`.
+11. `NominaResultXmlService` genera el XML `NOMFACTRES`.
+12. `ArtikosNominaResultItemWriter` envia `NOMFACTRES` si `dryRun=false`, `artikos.result.enabled=true` y el modo es `remote`.
+13. En modo `local-xml`, se genera `NOMFACTRES` pero no se envia a Artikos.
+14. `CONTROL_NOMINA` se actualiza con `OK`, `NOK` o `ERROR`.
+15. `BatchResultStore` mantiene resultados en memoria para consultas operacionales del job.
 
 ## Termino del reader
 
@@ -70,13 +74,20 @@ El procesamiento documental se resuelve por `DocumentProcessingService`:
 La respuesta funcional de Procurement se interpreta asi:
 
 - `statusCode=0`: documento `OK`.
-- `statusCode!=0`: documento `NOK`, sin fallar el job.
+- `statusCode=-20`: documento `OK` idempotente.
+- `statusCode!=0` distinto a duplicado: documento `NOK`, sin fallar el job.
 
 Los errores tecnicos de Procurement o errores de mapeo Artikos -> CMP fallan la nomina, marcan `CONTROL_NOMINA` como `ERROR` y evitan el envio de `NOMFACTRES`.
 
 ## Dry run
 
 Con `dryRun=true`, el servicio consulta Artikos y procesa siempre con la ruta simulada/local, aunque `procurement.integration.enabled=true`. No confirma recepcion, no envia resultado y no llama Procurement. Este modo sirve para validar parsing, reglas internas y resumen batch sin alterar estado en Artikos ni en sistemas externos.
+
+## Modo local XML
+
+`artikos.source.mode=local-xml` permite validar el pipeline tecnico usando un XML local como fuente cuando QA Artikos no tiene nominas disponibles. Este modo no consulta `NOMFACTERP`, no confirma `NOMFACTCONFIR` y no envia `NOMFACTRES` real. Si Procurement esta habilitado, si puede llamar Procurement.
+
+Detalle operativo en `docs/local-e2e-testing.md`.
 
 ## Errores funcionales
 
