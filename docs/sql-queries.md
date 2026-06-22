@@ -42,6 +42,51 @@ WHERE NUMERO_NOMINA = :numeroNomina
 ORDER BY CREATED_AT DESC;
 ```
 
+### Nominas OK que serian omitidas en reproceso
+
+```sql
+SELECT NUMERO_NOMINA,
+       JOB_EXECUTION_ID,
+       TOTAL_DOCUMENTS,
+       TOTAL_OK,
+       TOTAL_NOK,
+       CREATED_AT,
+       UPDATED_AT
+FROM CONTROL_NOMINA
+WHERE STATUS = 'OK'
+ORDER BY NVL(UPDATED_AT, CREATED_AT) DESC;
+```
+
+### Nominas ERROR candidatas a reproceso
+
+```sql
+SELECT NUMERO_NOMINA,
+       JOB_EXECUTION_ID,
+       ERROR_MESSAGE,
+       CREATED_AT,
+       UPDATED_AT
+FROM CONTROL_NOMINA
+WHERE STATUS = 'ERROR'
+ORDER BY NVL(UPDATED_AT, CREATED_AT) DESC;
+```
+
+### Ultimas ejecuciones por numeroNomina
+
+```sql
+SELECT NUMERO_NOMINA,
+       JOB_EXECUTION_ID,
+       STATUS,
+       TOTAL_DOCUMENTS,
+       TOTAL_OK,
+       TOTAL_NOK,
+       CREATED_AT,
+       UPDATED_AT,
+       ERROR_MESSAGE
+FROM CONTROL_NOMINA
+WHERE NUMERO_NOMINA = :numeroNomina
+ORDER BY NVL(UPDATED_AT, CREATED_AT) DESC;
+```
+
 ### Buscar nomina en un job especifico
 
 ```sql

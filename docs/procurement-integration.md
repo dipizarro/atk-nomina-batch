@@ -116,8 +116,48 @@ Si `NOMFACTCONFIR` es rechazado, el processor marca `CONTROL_NOMINA` como `ERROR
 ## Politica funcional
 
 - Documento aceptado por Procurement: `statusCode=0`, `ResultadoDocumento.status=OK`.
+- Documento ya existente en Procurement/ASI: se interpreta como OK idempotente y cuenta como `ResultadoDocumento.status=OK`.
 - Documento rechazado funcionalmente por Procurement: `statusCode!=0`, `ResultadoDocumento.status=NOK`.
 - Una nomina con uno o mas documentos `NOK` no falla el job por esa razon; se informa a Artikos via `NOMFACTRES` y `CONTROL_NOMINA` queda `NOK` si el envio de resultado fue exitoso.
+
+## Idempotencia
+
+No se crea una tabla adicional de detalle por documento. La unica tabla funcional propia del adapter sigue siendo `CONTROL_NOMINA`.
+
+La idempotencia se divide en dos niveles:
+
+- `CONTROL_NOMINA` controla reproceso por nomina.
+- Procurement/ASI controla duplicidad por documento.
+
+Antes de confirmar una nomina y antes de llamar Procurement, el processor consulta el ultimo registro `CONTROL_NOMINA` disponible por `NUMERO_NOMINA`.
+
+Reglas actuales:
+
+- Ultimo estado `OK`: no se vuelve a enviar documentos a Procurement. Se genera un resultado OK controlado por documento para permitir cerrar el flujo Artikos con `NOMFACTRES`.
+- Ultimo estado `NOK`: se permite reproceso.
+- Ultimo estado `ERROR`: se permite reproceso.
+- Ultimo estado `PROCESSING`: se permite reproceso controlado por ahora y se registra log.
+- Sin registro previo: se procesa normalmente.
+
+Limitacion actual: `CONTROL_NOMINA` no tiene columna de empresa, `profile` o `COD_EMPRES`, por lo que la busqueda de reproceso se hace solo por `NUMERO_NOMINA`.
+
+Si Procurement responde que el registro ya existe, el adapter lo trata como OK idempotente. Mensajes conocidos:
+
+- `El registro que intenta crear ya existe en la base de datos`
+- `registro ya existe`
+- `ya existe`
+- `duplicate`
+- `duplicado`
+- `unique constraint`
+- `ORA-00001`
+
+El mensaje de documento informado para ese caso es:
+
+```text
+Documento ya existia en Procurement/ASI
+```
+
+Errores funcionales distintos a duplicado siguen contando como `NOK`. Errores tecnicos siguen fallando la nomina/job.
 
 ## Politica tecnica
 
@@ -168,4 +208,5 @@ No se loguea el JSON completo en `INFO`. Request y response completos quedan res
 - Consultar ASI.
 - Modificar Artikos SOAP.
 - Cambiar `NOMFACTRES`.
-- Definir idempotencia final del documento en Procurement.
+- Crear tabla adicional de auditoria por documento.
+- Definir contrato formal de duplicado en Procurement.

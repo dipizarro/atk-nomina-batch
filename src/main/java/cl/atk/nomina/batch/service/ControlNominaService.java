@@ -121,6 +121,11 @@ public class ControlNominaService {
         return repository.findByIdJobExecutionIdAndIdNumeroNomina(jobExecutionId, numeroNomina);
     }
 
+    @Transactional(readOnly = true)
+    public Optional<ControlNominaEntity> findLatestByNumeroNomina(Long numeroNomina) {
+        return repository.findTopByIdNumeroNominaOrderByCreatedAtDesc(numeroNomina);
+    }
+
     private ControlNominaEntity createBaseEntity(Long jobExecutionId, Long numeroNomina) {
         ControlNominaEntity entity = new ControlNominaEntity();
         entity.setJobExecutionId(jobExecutionId);

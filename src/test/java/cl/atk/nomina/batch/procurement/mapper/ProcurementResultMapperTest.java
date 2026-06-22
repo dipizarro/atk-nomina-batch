@@ -6,13 +6,14 @@ import cl.atk.nomina.batch.domain.DocumentoContable;
 import cl.atk.nomina.batch.domain.Nomina;
 import cl.atk.nomina.batch.domain.ResultadoDocumento;
 import cl.atk.nomina.batch.procurement.dto.ProcurementDocumentPostResult;
+import cl.atk.nomina.batch.procurement.service.ProcurementDuplicateDetector;
 import cl.atk.nomina.batch.service.NominaXmlParserService;
 import org.junit.jupiter.api.Test;
 import org.springframework.core.io.ClassPathResource;
 
 class ProcurementResultMapperTest {
 
-    private final ProcurementResultMapper mapper = new ProcurementResultMapper();
+    private final ProcurementResultMapper mapper = new ProcurementResultMapper(new ProcurementDuplicateDetector());
     private final NominaXmlParserService parser = new NominaXmlParserService(
             new ClassPathResource("samples/ZSVIDA_Nom15960.xml"));
 
@@ -43,6 +44,23 @@ class ProcurementResultMapperTest {
 
         assertThat(result.status()).isEqualTo("NOK");
         assertThat(result.message()).isEqualTo("Regla funcional");
+    }
+
+    @Test
+    void mapsDuplicateProcurementResponseToIdempotentOkDocumentResult() {
+        ResultadoDocumento result = mapper.toResultadoDocumento(
+                15960L,
+                documento(),
+                new ProcurementDocumentPostResult(
+                        false,
+                        -1,
+                        "Error",
+                        "El registro que intenta crear ya existe en la base de datos",
+                        null,
+                        "{}"));
+
+        assertThat(result.status()).isEqualTo("OK");
+        assertThat(result.message()).isEqualTo("Documento ya existia en Procurement/ASI");
     }
 
     @Test

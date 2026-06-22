@@ -10,6 +10,8 @@ public interface ControlNominaJpaRepository extends JpaRepository<ControlNominaE
 
     Optional<ControlNominaEntity> findByIdJobExecutionIdAndIdNumeroNomina(Long jobExecutionId, Long numeroNomina);
 
+    Optional<ControlNominaEntity> findTopByIdNumeroNominaOrderByCreatedAtDesc(Long numeroNomina);
+
     List<ControlNominaEntity> findByIdJobExecutionId(Long jobExecutionId);
 
     boolean existsByIdJobExecutionIdAndIdNumeroNomina(Long jobExecutionId, Long numeroNomina);

@@ -56,6 +56,17 @@ public class ProcurementIntegrationService {
                     documento.rutProveedor());
             ProcurementDocumentRequest request = documentMapper.toCmpDocumentRequest(profile, nomina, documento);
             ProcurementDocumentPostResult postResult = procurementClient.postDocument(request);
+            boolean duplicate = resultMapper.isDuplicate(postResult);
+            if (duplicate) {
+                LOGGER.info("Procurement duplicate detected, treating as idempotent OK profile={} numeroNomina={} "
+                                + "secuencia={} idDocumento={} numeroDocumento={} procurementStatusCode={}",
+                        profile,
+                        numeroNomina,
+                        documento.secuencia(),
+                        documento.idDocumento(),
+                        documento.numeroDocumento(),
+                        postResult.statusCode());
+            }
             ResultadoDocumento resultadoDocumento = resultMapper.toResultadoDocumento(numeroNomina, documento, postResult);
             LOGGER.info("Finished Procurement document processing profile={} numeroNomina={} secuencia={} "
                             + "idDocumento={} numeroDocumento={} procurementStatusCode={} status={} elapsedMs={}",

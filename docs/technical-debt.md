@@ -82,16 +82,18 @@ Abordado parcialmente en Sprint 9.0:
 - `statusCode=0` se interpreta como OK y `statusCode!=0` como NOK funcional.
 - Integracion al processor batch implementada en Sprint 9.2, controlada por `procurement.integration.enabled`.
 - Errores tecnicos/mapping Procurement marcan `CONTROL_NOMINA` como `ERROR` y fallan el job.
+- Idempotencia inicial implementada en Sprint 9.3 sin tabla adicional: `CONTROL_NOMINA` controla reproceso por nomina y duplicados Procurement conocidos se tratan como OK idempotente.
 
 Pendiente:
 
-- Definir idempotencia de documento Procurement.
+- Definir contrato formal de respuesta idempotente Procurement, idealmente con `statusCode=0` y `payload.alreadyExists=true` o un codigo funcional explicito como `DOCUMENT_ALREADY_EXISTS`.
 - Evaluar endpoint bulk futuro.
 - Definir retry Procurement si aplica.
 - Obtener desde ASI los campos que hoy quedan configurables.
 - Validar con Procurement si `CMP_DOCUMT_DET_RUT.CMP_NUM_RUT` y `NUM_RUT` deben seguir usando ambos el RUT proveedor.
 - Validar valores definitivos para `COD_CONTBL`, `COD_TIP_UNID`, `GRL_COD_ITEM` y `NUM_PERIODO`.
-- Definir estados funcionales, reintentos y manejo de errores al conectar Procurement al flujo batch.
+- Revisar si `CONTROL_NOMINA` debe agregar empresa/profile en una evolucion futura para evitar ambiguedad por `NUMERO_NOMINA`.
+- Definir estados funcionales y reintentos finos para Procurement.
 
 ## Contrato REST y errores
 

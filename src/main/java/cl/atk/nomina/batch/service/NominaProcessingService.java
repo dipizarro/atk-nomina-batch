@@ -3,8 +3,10 @@ package cl.atk.nomina.batch.service;
 import cl.atk.nomina.batch.domain.Nomina;
 import cl.atk.nomina.batch.domain.ResultadoDocumento;
 import cl.atk.nomina.batch.domain.ResultadoNomina;
+import cl.atk.nomina.batch.domain.SimulatedDocumentoContable;
 import cl.atk.nomina.batch.domain.artikos.ArtikosOperationConfig;
 import cl.atk.nomina.batch.domain.artikos.ArtikosProfileType;
+import java.util.ArrayList;
 import java.util.List;
 import org.springframework.stereotype.Service;
 
@@ -54,6 +56,35 @@ public class NominaProcessingService {
                 simulatedDocumentProcessingService);
     }
 
+    public ResultadoNomina processAlreadyOk(
+            Long jobExecutionId,
+            Long numeroNomina,
+            ArtikosProfileType profile,
+            Nomina nomina,
+            ArtikosOperationConfig resultadoOperationConfig) {
+        List<ResultadoDocumento> documentos = new ArrayList<>();
+        nomina.documentos().forEach(documento -> documentos.add(new ResultadoDocumento(
+                new SimulatedDocumentoContable(
+                        documento,
+                        1,
+                        "%d-%d".formatted(numeroNomina, documento.idDocumento()),
+                        numeroNomina),
+                "OK",
+                "Documento omitido: nomina ya procesada OK",
+                documento.numeroDocumento(),
+                documento.rutProveedor(),
+                documento.tipoDocumento(),
+                documento.montoTotal())));
+
+        return buildResultadoNomina(
+                jobExecutionId,
+                numeroNomina,
+                nomina,
+                resultadoOperationConfig,
+                List.copyOf(documentos),
+                null);
+    }
+
     private ResultadoNomina processWithDocumentService(
             Long jobExecutionId,
             Long numeroNomina,
@@ -63,6 +94,22 @@ public class NominaProcessingService {
             DocumentProcessingService processingService) {
         List<ResultadoDocumento> documentos = processingService.processDocuments(profile, nomina);
 
+        return buildResultadoNomina(
+                jobExecutionId,
+                numeroNomina,
+                nomina,
+                resultadoOperationConfig,
+                documentos,
+                documentos.isEmpty() ? "Nomina sin documentos para informar" : null);
+    }
+
+    private ResultadoNomina buildResultadoNomina(
+            Long jobExecutionId,
+            Long numeroNomina,
+            Nomina nomina,
+            ArtikosOperationConfig resultadoOperationConfig,
+            List<ResultadoDocumento> documentos,
+            String errorMessage) {
         int totalOk = (int) documentos.stream().filter(ResultadoDocumento::isOk).count();
         int totalNok = documentos.size() - totalOk;
         int totalConciliaciones = nomina.documentos().stream()
@@ -73,7 +120,6 @@ public class NominaProcessingService {
                 .mapToInt(conciliacion -> conciliacion.distribuciones().size())
                 .sum();
         String status = totalNok == 0 && !documentos.isEmpty() ? "OK" : "NOK";
-        String errorMessage = documentos.isEmpty() ? "Nomina sin documentos para informar" : null;
 
         ResultadoNomina result = new ResultadoNomina(
                 jobExecutionId,

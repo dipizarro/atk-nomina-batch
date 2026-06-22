@@ -8,6 +8,7 @@ import cl.atk.nomina.batch.domain.error.IntegrationErrorType;
 import cl.atk.nomina.batch.service.ControlNominaService;
 import cl.atk.nomina.batch.service.NominaErrorPolicyService;
 import cl.atk.nomina.batch.service.NominaProcessingService;
+import cl.atk.nomina.batch.service.NominaReprocessingPolicyService;
 import cl.atk.nomina.batch.service.artikos.ArtikosGenericSoapResponseParser;
 import cl.atk.nomina.batch.service.artikos.ArtikosSoapClient;
 import cl.atk.nomina.batch.shared.exception.ArtikosIntegrationException;
@@ -25,6 +26,7 @@ public class ArtikosNominaItemProcessor implements ItemProcessor<ArtikosFetchedN
     private final ArtikosGenericSoapResponseParser genericResponseParser;
     private final NominaProcessingService nominaProcessingService;
     private final NominaErrorPolicyService errorPolicyService;
+    private final NominaReprocessingPolicyService reprocessingPolicyService;
     private final Long jobExecutionId;
     private final boolean dryRun;
 
@@ -34,6 +36,7 @@ public class ArtikosNominaItemProcessor implements ItemProcessor<ArtikosFetchedN
             ArtikosGenericSoapResponseParser genericResponseParser,
             NominaProcessingService nominaProcessingService,
             NominaErrorPolicyService errorPolicyService,
+            NominaReprocessingPolicyService reprocessingPolicyService,
             Long jobExecutionId,
             String dryRun) {
         this.controlNominaService = controlNominaService;
@@ -41,6 +44,7 @@ public class ArtikosNominaItemProcessor implements ItemProcessor<ArtikosFetchedN
         this.genericResponseParser = genericResponseParser;
         this.nominaProcessingService = nominaProcessingService;
         this.errorPolicyService = errorPolicyService;
+        this.reprocessingPolicyService = reprocessingPolicyService;
         this.jobExecutionId = jobExecutionId;
         this.dryRun = Boolean.parseBoolean(dryRun);
     }
@@ -62,6 +66,13 @@ public class ArtikosNominaItemProcessor implements ItemProcessor<ArtikosFetchedN
         }
 
         try {
+            if (reprocessingPolicyService.shouldSkipAlreadyOk(item.profile(), item.nomina())) {
+                LOGGER.info("Nomina already processed OK, skipping Procurement reprocessing jobExecutionId={} "
+                                + "profile={} numeroNomina={}",
+                        jobExecutionId, item.profile(), numeroNomina);
+                return processAlreadyOkNomina(item);
+            }
+
             LOGGER.info("[CONTROL_NOMINA] PROCESSING jobExecutionId={} numeroNomina={} profile={}",
                     jobExecutionId, numeroNomina, item.profile());
             markProcessing(item);
@@ -163,6 +174,25 @@ public class ArtikosNominaItemProcessor implements ItemProcessor<ArtikosFetchedN
                         item.nomina(),
                         soapClient.resultadoNominaConfig(item.profile()));
         LOGGER.info("Nomina documents processed jobExecutionId={} profile={} numeroNomina={} totalDocuments={} "
+                        + "totalOk={} totalNok={}",
+                jobExecutionId,
+                item.profile(),
+                item.numeroNomina(),
+                result.totalDocuments(),
+                result.totalOk(),
+                result.totalNok());
+        return result;
+    }
+
+    private ResultadoNomina processAlreadyOkNomina(ArtikosFetchedNomina item) {
+        LoggingContext.clearOperation();
+        ResultadoNomina result = nominaProcessingService.processAlreadyOk(
+                jobExecutionId,
+                item.numeroNomina(),
+                item.profile(),
+                item.nomina(),
+                soapClient.resultadoNominaConfig(item.profile()));
+        LOGGER.info("Nomina already OK result generated jobExecutionId={} profile={} numeroNomina={} totalDocuments={} "
                         + "totalOk={} totalNok={}",
                 jobExecutionId,
                 item.profile(),

@@ -43,7 +43,7 @@ class ProcurementIntegrationServiceTest {
         ResultadoDocumento result = new ProcurementIntegrationService(
                 documentMapper,
                 procurementClient,
-                new ProcurementResultMapper())
+                new ProcurementResultMapper(new ProcurementDuplicateDetector()))
                 .processDocument(ArtikosProfileType.VIDA, nomina, documento);
 
         assertThat(result.status()).isEqualTo("OK");
@@ -65,11 +65,38 @@ class ProcurementIntegrationServiceTest {
         ResultadoDocumento result = new ProcurementIntegrationService(
                 documentMapper,
                 procurementClient,
-                new ProcurementResultMapper())
+                new ProcurementResultMapper(new ProcurementDuplicateDetector()))
                 .processDocument(ArtikosProfileType.VIDA, nomina, documento);
 
         assertThat(result.status()).isEqualTo("NOK");
         assertThat(result.message()).isEqualTo("Regla funcional");
+    }
+
+    @Test
+    void processDocumentReturnsOkWhenProcurementReportsDuplicate() {
+        Nomina nomina = parser.parseSampleFile();
+        DocumentoContable documento = nomina.documentos().get(0);
+        ProcurementDocumentMapper documentMapper = mock(ProcurementDocumentMapper.class);
+        ProcurementClient procurementClient = mock(ProcurementClient.class);
+        ProcurementDocumentRequest request = new ProcurementDocumentRequest("CMP", null, null);
+        ProcurementDocumentPostResult postResult = new ProcurementDocumentPostResult(
+                false,
+                -1,
+                "Error",
+                "El registro que intenta crear ya existe en la base de datos",
+                null,
+                "{}");
+        when(documentMapper.toCmpDocumentRequest(ArtikosProfileType.VIDA, nomina, documento)).thenReturn(request);
+        when(procurementClient.postDocument(request)).thenReturn(postResult);
+
+        ResultadoDocumento result = new ProcurementIntegrationService(
+                documentMapper,
+                procurementClient,
+                new ProcurementResultMapper(new ProcurementDuplicateDetector()))
+                .processDocument(ArtikosProfileType.VIDA, nomina, documento);
+
+        assertThat(result.status()).isEqualTo("OK");
+        assertThat(result.message()).isEqualTo("Documento ya existia en Procurement/ASI");
     }
 
     @Test
@@ -83,7 +110,7 @@ class ProcurementIntegrationServiceTest {
         ProcurementIntegrationService service = new ProcurementIntegrationService(
                 documentMapper,
                 mock(ProcurementClient.class),
-                new ProcurementResultMapper());
+                new ProcurementResultMapper(new ProcurementDuplicateDetector()));
 
         assertThatThrownBy(() -> service.processDocument(ArtikosProfileType.VIDA, nomina, documento))
                 .isInstanceOf(ArtikosIntegrationException.class)
@@ -104,7 +131,7 @@ class ProcurementIntegrationServiceTest {
         ProcurementIntegrationService service = new ProcurementIntegrationService(
                 documentMapper,
                 procurementClient,
-                new ProcurementResultMapper());
+                new ProcurementResultMapper(new ProcurementDuplicateDetector()));
 
         assertThatThrownBy(() -> service.processDocument(ArtikosProfileType.VIDA, nomina, documento))
                 .isInstanceOf(ArtikosIntegrationException.class)

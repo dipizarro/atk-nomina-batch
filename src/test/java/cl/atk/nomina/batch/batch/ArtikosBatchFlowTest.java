@@ -199,6 +199,46 @@ class ArtikosBatchFlowTest {
     }
 
     @Test
+    void processorSkipsProcurementWhenNominaWasAlreadyOk() {
+        ControlNominaService controlNominaService = mock(ControlNominaService.class);
+        ArtikosSoapClient soapClient = mock(ArtikosSoapClient.class);
+        ArtikosGenericSoapResponseParser genericParser = mock(ArtikosGenericSoapResponseParser.class);
+        NominaProcessingService nominaProcessingService = mock(NominaProcessingService.class);
+        ResultadoNomina expectedResult = resultadoNomina();
+        when(soapClient.resultadoNominaConfig(ArtikosProfileType.VIDA)).thenReturn(resultadoOperationConfig());
+        when(nominaProcessingService.processAlreadyOk(
+                eq(7L),
+                eq(15960L),
+                eq(ArtikosProfileType.VIDA),
+                any(Nomina.class),
+                any(ArtikosOperationConfig.class)))
+                .thenReturn(expectedResult);
+        ArtikosNominaItemProcessor processor = new ArtikosNominaItemProcessor(
+                controlNominaService,
+                soapClient,
+                genericParser,
+                nominaProcessingService,
+                new NominaErrorPolicyService(),
+                reprocessingPolicy(true),
+                7L,
+                "false");
+
+        ResultadoNomina result = processor.process(fetchedNomina(false));
+
+        assertThat(result).isSameAs(expectedResult);
+        verify(controlNominaService, never()).markProcessing(any(), any());
+        verify(soapClient, never()).confirmNominaRawXml(any(), any(), any());
+        verify(nominaProcessingService).processAlreadyOk(
+                eq(7L),
+                eq(15960L),
+                eq(ArtikosProfileType.VIDA),
+                any(Nomina.class),
+                any(ArtikosOperationConfig.class));
+        verify(nominaProcessingService, never()).process(any(), any(), any(), any(), any());
+        verify(nominaProcessingService, never()).processSimulated(any(), any(), any(), any(), any());
+    }
+
+    @Test
     void processorMarksErrorWhenConfirmationFails() {
         ControlNominaService controlNominaService = mock(ControlNominaService.class);
         ArtikosSoapClient soapClient = mock(ArtikosSoapClient.class);
@@ -395,8 +435,16 @@ class ArtikosBatchFlowTest {
                 genericParser,
                 nominaProcessingService,
                 new NominaErrorPolicyService(),
+                reprocessingPolicy(false),
                 7L,
                 dryRun);
+    }
+
+    private cl.atk.nomina.batch.service.NominaReprocessingPolicyService reprocessingPolicy(boolean skipAlreadyOk) {
+        cl.atk.nomina.batch.service.NominaReprocessingPolicyService service =
+                mock(cl.atk.nomina.batch.service.NominaReprocessingPolicyService.class);
+        when(service.shouldSkipAlreadyOk(any(), any())).thenReturn(skipAlreadyOk);
+        return service;
     }
 
     private ArtikosNominaResultItemWriter writer(

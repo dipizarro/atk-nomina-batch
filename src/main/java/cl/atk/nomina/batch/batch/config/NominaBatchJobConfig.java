@@ -19,6 +19,7 @@ import cl.atk.nomina.batch.service.NominaErrorPolicyService;
 import cl.atk.nomina.batch.service.NominaResultXmlService;
 import cl.atk.nomina.batch.service.NominaXmlParserService;
 import cl.atk.nomina.batch.service.NominaProcessingService;
+import cl.atk.nomina.batch.service.NominaReprocessingPolicyService;
 import cl.atk.nomina.batch.service.artikos.ArtikosGenericSoapResponseParser;
 import cl.atk.nomina.batch.service.artikos.ArtikosSoapClient;
 import cl.atk.nomina.batch.service.artikos.ArtikosSoapResponseParser;
@@ -101,6 +102,7 @@ public class NominaBatchJobConfig {
             ArtikosGenericSoapResponseParser genericResponseParser,
             NominaProcessingService nominaProcessingService,
             NominaErrorPolicyService errorPolicyService,
+            NominaReprocessingPolicyService reprocessingPolicyService,
             @Value("#{stepExecution.jobExecutionId}") Long jobExecutionId,
             @Value("#{jobParameters['dryRun']}") String dryRun) {
         return new ArtikosNominaItemProcessor(
@@ -109,6 +111,7 @@ public class NominaBatchJobConfig {
                 genericResponseParser,
                 nominaProcessingService,
                 errorPolicyService,
+                reprocessingPolicyService,
                 jobExecutionId,
                 dryRun);
     }

@@ -12,6 +12,7 @@ La aplicacion distingue errores tecnicos de integracion, rechazos funcionales de
 | Confirm error | FAILED | ERROR | Detener |
 | Documento NOK | COMPLETED | NOK | Informar resultado |
 | Procurement NOK funcional | COMPLETED | NOK | Informar resultado |
+| Procurement duplicado conocido | COMPLETED | OK si no hay otros NOK | Tratar como OK idempotente |
 | Procurement error tecnico | FAILED | ERROR | Detener sin enviar NOMFACTRES |
 | Procurement mapping error | FAILED | ERROR | Detener sin enviar NOMFACTRES |
 | NOMFACTRES error | FAILED | ERROR | Detener |
@@ -43,11 +44,22 @@ El job termina `FAILED` ante errores tecnicos de fetch, rechazo de confirmacion,
 Procurement distingue respuesta funcional de falla tecnica:
 
 - `statusCode=0`: documento `OK`.
-- `statusCode!=0`: documento `NOK`. El job continua, se genera `NOMFACTRES` y la nomina queda `NOK` si Artikos acepta el resultado.
+- `statusCode!=0` con mensaje de duplicado conocido: documento `OK` idempotente. El job continua y el documento cuenta como OK.
+- `statusCode!=0` sin mensaje de duplicado conocido: documento `NOK`. El job continua, se genera `NOMFACTRES` y la nomina queda `NOK` si Artikos acepta el resultado.
 - timeout, conexion, HTTP `5xx`, serializacion o respuesta no parseable: `PROCUREMENT_TECHNICAL_ERROR`.
 - error de mapeo Artikos -> CMP o propiedad requerida ausente: `PROCUREMENT_MAPPING_ERROR`.
 
 Ante `PROCUREMENT_TECHNICAL_ERROR` o `PROCUREMENT_MAPPING_ERROR`, `CONTROL_NOMINA` queda `ERROR`, el job termina `FAILED` y no se informa `NOMFACTRES` para esa nomina.
+
+Mensajes de duplicado reconocidos actualmente:
+
+- `El registro que intenta crear ya existe en la base de datos`
+- `registro ya existe`
+- `ya existe`
+- `duplicate`
+- `duplicado`
+- `unique constraint`
+- `ORA-00001`
 
 ## Respuestas REST
 
