@@ -1,14 +1,20 @@
 package cl.atk.nomina.batch.procurement.service;
 
+import cl.atk.nomina.batch.procurement.domain.ProcurementStatusCode;
 import java.text.Normalizer;
 import java.util.List;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 @Component
 public class ProcurementDuplicateDetector {
 
+    private static final Logger LOGGER = LoggerFactory.getLogger(ProcurementDuplicateDetector.class);
+
     private static final List<String> DUPLICATE_PATTERNS = List.of(
             "el registro que intenta crear ya existe en la base de datos",
+            "registro que intenta crear ya existe",
             "registro ya existe",
             "ya existe",
             "duplicate",
@@ -16,12 +22,15 @@ public class ProcurementDuplicateDetector {
             "unique constraint",
             "ora-00001");
 
-    public boolean isDuplicate(String message, Object error) {
+    public boolean isDuplicate(Integer statusCode, String message, Object error) {
         String combined = normalized("%s %s".formatted(value(message), value(error)));
-        if (combined.isBlank()) {
-            return false;
+        if (Integer.valueOf(ProcurementStatusCode.DOCUMENT_ALREADY_EXISTS).equals(statusCode)) {
+            if (combined.isBlank() || DUPLICATE_PATTERNS.stream().noneMatch(combined::contains)) {
+                LOGGER.warn("Procurement returned duplicate statusCode -20 without duplicate message");
+            }
+            return true;
         }
-        return DUPLICATE_PATTERNS.stream().anyMatch(combined::contains);
+        return !combined.isBlank() && DUPLICATE_PATTERNS.stream().anyMatch(combined::contains);
     }
 
     private String value(Object value) {

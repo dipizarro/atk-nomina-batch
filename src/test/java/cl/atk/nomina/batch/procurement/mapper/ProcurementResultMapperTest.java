@@ -53,8 +53,8 @@ class ProcurementResultMapperTest {
                 documento(),
                 new ProcurementDocumentPostResult(
                         false,
-                        -1,
-                        "Error",
+                        -20,
+                        null,
                         "El registro que intenta crear ya existe en la base de datos",
                         null,
                         "{}"));

@@ -83,10 +83,12 @@ Abordado parcialmente en Sprint 9.0:
 - Integracion al processor batch implementada en Sprint 9.2, controlada por `procurement.integration.enabled`.
 - Errores tecnicos/mapping Procurement marcan `CONTROL_NOMINA` como `ERROR` y fallan el job.
 - Idempotencia inicial implementada en Sprint 9.3 sin tabla adicional: `CONTROL_NOMINA` controla reproceso por nomina y duplicados Procurement conocidos se tratan como OK idempotente.
+- Respuesta real `statusCode=-20` de Procurement formalizada como OK idempotente en Sprint 9.3.1.
 
 Pendiente:
 
-- Definir contrato formal de respuesta idempotente Procurement, idealmente con `statusCode=0` y `payload.alreadyExists=true` o un codigo funcional explicito como `DOCUMENT_ALREADY_EXISTS`.
+- Formalizar en la documentacion de Procurement que `statusCode=-20` corresponde a `DOCUMENT_ALREADY_EXISTS`.
+- Idealmente reemplazar la deteccion por texto por un codigo funcional documentado y estable.
 - Evaluar endpoint bulk futuro.
 - Definir retry Procurement si aplica.
 - Obtener desde ASI los campos que hoy quedan configurables.

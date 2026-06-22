@@ -81,8 +81,8 @@ class ProcurementIntegrationServiceTest {
         ProcurementDocumentRequest request = new ProcurementDocumentRequest("CMP", null, null);
         ProcurementDocumentPostResult postResult = new ProcurementDocumentPostResult(
                 false,
-                -1,
-                "Error",
+                -20,
+                null,
                 "El registro que intenta crear ya existe en la base de datos",
                 null,
                 "{}");

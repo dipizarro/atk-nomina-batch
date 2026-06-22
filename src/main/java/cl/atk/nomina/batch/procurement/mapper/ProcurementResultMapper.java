@@ -45,6 +45,7 @@ public class ProcurementResultMapper {
     public boolean isDuplicate(ProcurementDocumentPostResult procurementResult) {
         return procurementResult != null
                 && duplicateDetector.isDuplicate(
+                        procurementResult.statusCode(),
                         messageForDetection(procurementResult),
                         procurementResult.rawResponse());
     }

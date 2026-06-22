@@ -95,6 +95,7 @@ Contrato base esperado:
 Reglas:
 
 - `statusCode=0`: OK funcional.
+- `statusCode=-20`: documento ya existente, OK idempotente si corresponde a duplicado conocido.
 - `statusCode!=0`: NOK funcional si HTTP fue valido o el body es parseable.
 - `payload.externalDocumentId`, `payload.documentId` o `payload.id` puede usarse como identificador externo si Procurement lo entrega.
 
@@ -158,6 +159,23 @@ Documento ya existia en Procurement/ASI
 ```
 
 Errores funcionales distintos a duplicado siguen contando como `NOK`. Errores tecnicos siguen fallando la nomina/job.
+
+### Respuesta idempotente confirmada
+
+Procurement confirmo esta respuesta real cuando el documento ya existe:
+
+```json
+{
+  "payload": null,
+  "statusCode": -20,
+  "message": null,
+  "error": "El registro que intenta crear ya existe en la base de datos"
+}
+```
+
+El adapter interpreta `statusCode=-20` como documento ya existente y lo transforma en `ResultadoDocumento.status=OK` con mensaje idempotente. Esto permite informar OK a Artikos en `NOMFACTRES` y evita que un reproceso falle por duplicados ya controlados por Procurement/ASI.
+
+A futuro, lo ideal es que Procurement documente formalmente `-20` como un codigo funcional `DOCUMENT_ALREADY_EXISTS`.
 
 ## Politica tecnica
 
