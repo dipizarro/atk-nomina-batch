@@ -90,3 +90,15 @@ ORDER BY CREATED_AT DESC;
 - Procurement `statusCode=-20`: documento OK idempotente.
 - Procurement funcional distinto a duplicado: documento NOK.
 - Error tecnico Procurement: job FAILED y `CONTROL_NOMINA` ERROR.
+
+## Evidencias sanitizadas
+
+Las evidencias del cierre funcional local XML quedan en:
+
+- `docs/evidence/procurement-local-e2e.md`
+- `docs/evidence/procurement-sample-request-sanitized.json`
+- `docs/evidence/procurement-sample-response-ok.json`
+- `docs/evidence/procurement-sample-response-duplicate.json`
+- `docs/evidence/nomfactres-sample-sanitized.xml`
+
+Estos archivos no contienen tokens, passwords, URLs privadas ni datos reales sensibles.

@@ -6,17 +6,19 @@ Desde Sprint 9.5 el mapper soporta XML Artikos v2 y consulta homologaciones ASI 
 
 Fuentes principales:
 
-- XML Artikos v2: `Tipo_ERP`, `Msg_To`, `USO_IVA`, `DocCurrency`, fechas y distribuciones.
-- ASI Oracle: `GRL_MAE_ITEM_DET` por `COD_CUENTA`, `COD_SISTEM` y `COD_IMPSTO`, mas validacion de maestro vigente en `GRL_MAE_ITEM`, para resolver `GRL_COD_ITEM`, `COD_TIP_UNID` y `COD_CONTBL`.
-- Properties: constantes operativas como `document-type`, `cod-sistem`, `num-periodo`, `cod-tip-cuenta`, descuentos, IVA y cantidad.
+- XML Artikos v2: `Tipo_ERP`, `Msg_To`, `USO_IVA`, `Quantity`, fechas, proveedor y distribuciones.
+- ASI Oracle: `GRL_MAE_ITEM_DET` por `COD_CUENTA`, `COD_SISTEM` y `COD_IMPSTO`, mas validacion de maestro vigente en `GRL_MAE_ITEM`, para resolver `GRL_COD_ITEM`, `COD_TIP_UNID`, `COD_TIP_CNTA_ITEMS`, `COD_CONTBL`, `COD_SISTEM`, `NUM_PERIODO` y `COD_MONEDA`.
+- Properties: constantes operativas como raiz `document-type`, filtro `cod-sistem`, tipo de cambio, descuentos e IVA.
 
 Reglas nuevas:
 
 - Raiz `COD_TIP_DOCUMT` sigue siendo `CMP`.
 - `CMP_DOCUMT.COD_TIP_DOCUMT` se obtiene desde `Tipo_ERP`: `FEC/33`, `FCE/34`, `NDC/56`, `ECC/61`.
-- `CMP_DOCUMT.COD_EMPRES` se resuelve desde `Msg_To`: `001/ZSGVIDA` -> `001`, `002/ZSGRALES` -> `002`; si falta, se usa fallback por profile.
+- `CMP_DOCUMT.COD_EMPRES` se resuelve desde `Msg_To`: `001/ZSGVIDA/ZSVIDA` -> `001`, `002/ZSGRALES` -> `002`; si falta, el mapper falla de forma controlada.
 - `CMP_DOCUMT.CODIGO_REC_IVA` se obtiene desde `USO_IVA`; valores permitidos `U`, `R`, `N`; si viene vacio, default `U`.
-- `DocCurrency=CLP` o `$` se envia como `$`; otra moneda usa `procurement.mapping.default-currency`.
+- `CMP_DOCUMT.COD_MONEDA` se obtiene desde `GRL_MAE_ITEM_DET.COD_MONEDA`.
+- `CMP_DOCUMT_DET.NUM_CANTDD` se obtiene desde `Conciliacion.Quantity`; si el tag no viene, se usa `1`.
+- `CMP_DOCUMT_DET.GLS_LINEA` se arma con `Tipo_ERP + " " + Proveedor`.
 - Cada distribucion consulta `GRL_MAE_ITEM_DET` por `COD_CUENTA`, `COD_SISTEM=CM` y `COD_IMPSTO`. Si `Monto_Neto > 0`, `COD_IMPSTO=IVA`; si `Monto_Neto = 0`, `COD_IMPSTO=EXE`. Luego valida el maestro vigente en `GRL_MAE_ITEM` usando `COD_EMPRES`, `NUM_PERIODO` y `GRL_COD_ITEM` devueltos por el detalle.
 - Si las lineas devuelven distintos `COD_CONTBL`, el mapper falla con `ProcurementMappingException`.
 
@@ -63,29 +65,20 @@ La estrategia inicial es uno a uno:
 - cada `DistribucionContable` Artikos genera una linea `CMP_DOCUMT_DET`;
 - `CMP_DOCUMT_DET_RUT` se completa con el RUT proveedor y vigencia activa para cumplir el contrato real de Procurement.
 
-## Campos por profile
+## Campo empresa
 
-| Profile Artikos | COD_EMPRES |
+| Artikos `Msg_To` | COD_EMPRES |
 | --- | --- |
-| `GENERALES` | `002` |
-| `VIDA` | `001` |
+| `001`, `ZSGVIDA`, `ZSVIDA` | `001` |
+| `002`, `ZSGRALES` | `002` |
 
-La configuracion vive en:
-
-```properties
-procurement.mapping.company-by-profile.GENERALES=002
-procurement.mapping.company-by-profile.VIDA=001
-```
+No existe fallback por profile para `COD_EMPRES`; si `Msg_To` falta o no esta soportado, el mapper detiene el envio a Procurement con error controlado.
 
 ## Campos constantes
 
 | Procurement | Valor |
 | --- | --- |
 | Raiz `COD_TIP_DOCUMT` | `CMP` |
-| `CMP_DOCUMT.COD_TIP_DOCUMT` | `FEC` |
-| `CMP_DOCUMT.COD_SISTEM` | `CM` |
-| `CMP_DOCUMT.COD_TIP_CUENTA` | `2` por defecto |
-| `CMP_DOCUMT_DET.COD_TIP_CUENTA` | `2` por defecto |
 | `CMP_DOCUMT_DET_RUT.A_IND_VIGE` | `V` |
 | `HNR` | `null` |
 
@@ -108,6 +101,9 @@ Aunque Artikos trae `Tipo_Documento` y `Tipo_ERP`, para esta integracion la raiz
 | `Documento.Monto_IVA` | `CMP_DOCUMT.MTO_TOT_IVADIG` | Valor directo, `0` si viene nulo. |
 | `Documento.Monto_Total` | `CMP_DOCUMT.MTO_TOT_DOCDIG` | Valor directo, `0` si viene nulo. |
 | `Documento.Numero_Documento` | `CMP_DOCUMT.NUM_FOL_DOCUMT` | Valor numerico del folio/documento. |
+| `Documento.Tipo_ERP` | `CMP_DOCUMT.COD_TIP_DOCUMT` | Se normaliza via `ArtikosDocumentTypeMapper`. Ejemplo `33` -> `FEC`; si ya viene `FEC`, se envia `FEC`. |
+| `Documento.Tipo_ERP + Documento.Proveedor` | `CMP_DOCUMT.GLS_DOCUMT`, `CMP_DOCUMT_DET.GLS_LINEA` | Ejemplo `FEC DIMERC S.A.`. |
+| `Conciliacion.Quantity` | `CMP_DOCUMT_DET.NUM_CANTDD` | Valor directo; si no viene, default `1`. |
 | `Distribucion.Cod_CuentaContable` | `CMP_DOCUMT.COD_CUENTA` | Primera cuenta contable disponible en distribuciones. |
 | `Distribucion.Cod_CuentaContable` | `CMP_DOCUMT_DET.COD_CUENTA` | Valor directo por linea; requerido por `ASI.CMP_DOCUMT_DET`. |
 | `Distribucion.Cod_CentroCosto` | `CMP_DOCUMT_DET.COD_CCOSTO` | Valor directo. |
@@ -118,48 +114,34 @@ Aunque Artikos trae `Tipo_Documento` y `Tipo_ERP`, para esta integracion la raiz
 
 ## Campos configurables por properties
 
-| Property | Procurement | Nota |
+| Property | Uso | Nota |
 | --- | --- | --- |
 | `procurement.mapping.document-type` | Raiz `COD_TIP_DOCUMT` | Default `CMP`. |
-| `procurement.mapping.cmp-document-type` | `CMP_DOCUMT.COD_TIP_DOCUMT` | Default `FEC`. |
-| `procurement.mapping.cod-sistem` | `CMP_DOCUMT.COD_SISTEM` | Default `CM`. |
-| `procurement.mapping.num-periodo` | `CMP_DOCUMT.NUM_PERIODO` | Debe validarse contra periodo abierto ASI. |
-| `procurement.mapping.cod-contbl` | `CMP_DOCUMT.COD_CONTBL` | Pendiente confirmar valor real. |
-| `procurement.mapping.cod-tip-cuenta` | `CMP_DOCUMT.COD_TIP_CUENTA`, `CMP_DOCUMT_DET.COD_TIP_CUENTA` | Default `2`, alineado con el helper actual de Procurement. |
-| `procurement.mapping.cod-tip-unid` | `CMP_DOCUMT_DET.COD_TIP_UNID` | Pendiente confirmar valor real. |
-| `procurement.mapping.grl-cod-item` | `CMP_DOCUMT_DET.GRL_COD_ITEM` | Pendiente confirmar valor real. |
-| `procurement.mapping.line-gloss` | `CMP_DOCUMT_DET.GLS_LINEA` | Default `BENEFICIOS AL PERSONAL`. Siempre se usa este valor para respetar largo maximo Oracle. |
+| `procurement.mapping.cod-sistem` | Filtro lookup ASI | Default `CM`. El valor enviado en `CMP_DOCUMT.COD_SISTEM` sale desde `GRL_MAE_ITEM_DET.COD_SISTEM`. |
 | `procurement.mapping.val-tip-cambio` | `CMP_DOCUMT_DET.VAL_TIP_CAMBIO` | Default `1`. |
 | `procurement.mapping.pct-dscnto` | `CMP_DOCUMT_DET.PCT_DSCNTO` | Default `0`. |
 | `procurement.mapping.mto-dscnto` | `CMP_DOCUMT_DET.MTO_DSCNTO` | Default `0`. |
 | `procurement.mapping.pct-iva` | `CMP_DOCUMT_DET.PCT_IVA` | Default `19`. |
-| `procurement.mapping.codigo-rec-iva` | `CMP_DOCUMT.CODIGO_REC_IVA` | Pendiente confirmar valor real. |
-| `procurement.mapping.default-cantidad` | `CMP_DOCUMT_DET.NUM_CANTDD` | Default `1`. |
-| `procurement.mapping.default-currency` | `CMP_DOCUMT.COD_MONEDA` | Default `CLP`. Siempre se usa este valor, aunque Artikos informe `DocCurrency`. |
 
 Si falta una property obligatoria, el mapper lanza `ProcurementMappingException` con el nombre de la property.
 
-## Campos candidatos a consulta ASI futura
+## Campos resueltos desde ASI
 
-Esta seccion queda como referencia historica. Desde Sprint 9.5 ya se resuelven desde ASI:
+Desde Sprint 9.5 se resuelven desde `GRL_MAE_ITEM_DET`:
 
 - `COD_CONTBL`
 - `COD_TIP_UNID`
 - `GRL_COD_ITEM`
-
-Siguen pendientes de definicion funcional:
-
 - `NUM_PERIODO`
-- Validacion de cuenta contable y centro de costo
-- Periodo abierto
+- `COD_TIP_CNTA_ITEMS`
+- `COD_SISTEM`
+- `COD_MONEDA`
+
+La validacion de cuenta contable, centro de costo y periodo abierto sigue quedando del lado de Procurement/ASI.
 
 ## Pendientes
 
-- Validar valor definitivo de `COD_CONTBL`.
-- Validar valor definitivo de `COD_TIP_CUENTA`.
-- Validar valor definitivo de `COD_TIP_UNID`.
-- Validar valor definitivo de `GRL_COD_ITEM`.
-- Validar `NUM_PERIODO` contra periodo abierto ASI.
+- Validar catalogos ASI para evitar FK de cuenta o centro de costo al insertar en Procurement.
 - Definir idempotencia para documentos enviados a Procurement.
 - Definir estrategia de reintentos y errores al consumir `POST /api/v1/document`.
 - Evaluar endpoint bulk en sprint posterior.

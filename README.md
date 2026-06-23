@@ -170,6 +170,16 @@ El mapeo actual construye el request CMP desde `DocumentoContable`, genera una l
 
 El detalle esta documentado en `docs/procurement-mapping.md` y `docs/procurement-integration.md`.
 
+## Procurement functional closure
+
+El cierre funcional de la integracion Procurement queda documentado con evidencias sanitizadas:
+
+- Cierre funcional: `docs/procurement-functional-closure.md`
+- Lookup ASI: `docs/asi-lookup.md`
+- Evidencia local E2E: `docs/evidence/procurement-local-e2e.md`
+
+El flujo local XML ya permite validar parser, mapper, lookup ASI, POST Procurement, generacion de `NOMFACTRES` y actualizacion de `CONTROL_NOMINA` sin consumir Artikos remoto. Sigue pendiente la validacion con nominas reales Artikos QA en estado correcto para confirmar `NOMFACTCONFIR` y enviar `NOMFACTRES` real.
+
 ## Local XML end-to-end testing
 
 Cuando QA Artikos no tiene nominas disponibles, se puede ejecutar el batch usando el XML local Artikos como fuente:
@@ -302,6 +312,8 @@ El servicio nacio como una POC para validar integracion SOAP Artikos, procesamie
 - Matriz gateway: `docs/gateway-endpoints.md`
 - Mapeo Procurement CMP: `docs/procurement-mapping.md`
 - Integracion Procurement: `docs/procurement-integration.md`
+- Cierre funcional Procurement: `docs/procurement-functional-closure.md`
+- Lookup ASI Procurement: `docs/asi-lookup.md`
 - Logging: `docs/logging.md`
 - Hardening operativo: `docs/operational-hardening.md`
 - Manejo de errores: `docs/error-handling.md`

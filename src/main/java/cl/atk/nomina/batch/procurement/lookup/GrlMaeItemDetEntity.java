@@ -17,6 +17,9 @@ public class GrlMaeItemDetEntity {
     @Column(name = "COD_TIP_UNID", columnDefinition = "CHAR")
     private String codTipUnid;
 
+    @Column(name = "COD_TIP_CNTA_ITEMS", columnDefinition = "CHAR")
+    private String codTipCntaItems;
+
     @Column(name = "COD_CONTBL", columnDefinition = "CHAR")
     private String codContbl;
 
@@ -37,6 +40,14 @@ public class GrlMaeItemDetEntity {
 
     public void setCodTipUnid(String codTipUnid) {
         this.codTipUnid = codTipUnid;
+    }
+
+    public String getCodTipCntaItems() {
+        return codTipCntaItems;
+    }
+
+    public void setCodTipCntaItems(String codTipCntaItems) {
+        this.codTipCntaItems = codTipCntaItems;
     }
 
     public String getCodContbl() {

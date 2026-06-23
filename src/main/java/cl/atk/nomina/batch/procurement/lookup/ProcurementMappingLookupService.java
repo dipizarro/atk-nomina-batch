@@ -23,10 +23,7 @@ public class ProcurementMappingLookupService {
 
     @Transactional(readOnly = true)
     public ProcurementItemLookupResult resolveItemForDistribution(
-            String codEmpres,
-            Integer numPeriodo,
             String codSistem,
-            String codMoneda,
             Long codCuenta,
             String codImpsto) {
         String normalizedCodSistem = normalize(codSistem);
@@ -60,7 +57,10 @@ public class ProcurementMappingLookupService {
         return new ProcurementItemLookupResult(
                 grlCodItem,
                 normalize(detail.getCodTipUnid()),
+                normalize(detail.getCodTipCntaItems()),
                 normalize(detail.getCodContbl()),
+                normalize(detail.getId().getCodSistem()),
+                detail.getId().getNumPeriodo(),
                 normalize(detail.getId().getCodImpsto()),
                 normalize(detail.getId().getCodMoneda()),
                 detail.getId().getCodCuenta());

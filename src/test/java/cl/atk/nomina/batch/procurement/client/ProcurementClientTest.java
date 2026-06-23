@@ -2,7 +2,6 @@ package cl.atk.nomina.batch.procurement.client;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
@@ -36,7 +35,6 @@ import cl.atk.nomina.batch.procurement.mapper.ProcurementMappingValidator;
 import cl.atk.nomina.batch.procurement.mapper.ProcurementUsoIvaMapper;
 import cl.atk.nomina.batch.service.NominaXmlParserService;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import java.math.BigDecimal;
 import java.net.SocketTimeoutException;
 import org.junit.jupiter.api.Test;
 import org.springframework.core.io.ClassPathResource;
@@ -263,14 +261,14 @@ class ProcurementClientTest {
         DocumentoContable documento = nomina.documentos().get(0);
         ProcurementMappingLookupService lookupService = mock(ProcurementMappingLookupService.class);
         when(lookupService.resolveItemForDistribution(
-                anyString(), anyInt(), anyString(), anyString(), anyLong(), anyString()))
-                .thenReturn(new ProcurementItemLookupResult("SERVICIO", "UN", "CONTBL", "IVA", "$", 6130401000L));
+                anyString(), anyLong(), anyString()))
+                .thenReturn(new ProcurementItemLookupResult("SERVICIO", "UN", "2", "CONTBL", "CM", 202606, "IVA", "$", 6130401000L));
         return new ProcurementDocumentMapper(
                 mappingProperties(),
                 new ProcurementMappingValidator(),
                 new ProcurementDateMapper(),
                 new ArtikosDocumentTypeMapper(),
-                new ArtikosCompanyMapper(new ProcurementMappingValidator()),
+                new ArtikosCompanyMapper(),
                 new ProcurementUsoIvaMapper(),
                 new ProcurementTaxTypeResolver(),
                 lookupService)
@@ -278,13 +276,6 @@ class ProcurementClientTest {
     }
 
     private ProcurementMappingProperties mappingProperties() {
-        ProcurementMappingProperties properties = new ProcurementMappingProperties();
-        properties.setNumPeriodo(202606);
-        properties.setCodContbl("CONTBL");
-        properties.setCodTipUnid("UN");
-        properties.setGrlCodItem("SERVICIO");
-        properties.setCodigoRecIva("REC");
-        properties.setDefaultCantidad(BigDecimal.ONE);
-        return properties;
+        return new ProcurementMappingProperties();
     }
 }

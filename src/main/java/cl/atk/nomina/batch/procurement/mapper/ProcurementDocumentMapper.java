@@ -70,11 +70,10 @@ public class ProcurementDocumentMapper {
 
         String documentType = properties.getDocumentType();
         Long rutProveedor = RutUtils.extractRutNumber(documento.rutProveedor());
-        String codEmpres = companyMapper.resolveCodEmpres(profile, nomina, properties);
-        String codMoneda = resolveCurrency(documento.docCurrency());
-        List<MappedDetail> details = toDetails(documento, codEmpres, codMoneda);
+        String codEmpres = companyMapper.resolveCodEmpres(profile, nomina);
+        List<MappedDetail> details = toDetails(documento);
         ProcurementCmpRequest cmp = new ProcurementCmpRequest(
-                toCmpDocumt(nomina, documento, rutProveedor, codEmpres, codMoneda, details),
+                toCmpDocumt(nomina, documento, rutProveedor, codEmpres, details),
                 details.stream().map(MappedDetail::request).toList(),
                 new ProcurementCmpDocumtDetRutRequest(rutProveedor, rutProveedor, "V"));
 
@@ -86,25 +85,25 @@ public class ProcurementDocumentMapper {
             DocumentoContable documento,
             Long rutProveedor,
             String codEmpres,
-            String codMoneda,
             List<MappedDetail> details) {
         String fechaEmision = dateMapper.toProcurementDate(documento.fechaEmision());
         String fechaRecepcion = dateMapper.toProcurementDate(documento.fechaRecepcion());
         String fechaVencimiento = dateMapper.toProcurementDate(
                 isBlank(documento.fechaVencimiento()) ? documento.fechaEmision() : documento.fechaVencimiento());
+        ProcurementItemLookupResult firstLookup = firstLookup(details);
         String codContbl = singleCodContbl(details);
 
         return new ProcurementCmpDocumtRequest(
                 documentTypeMapper.toProcurementDocumentType(documento.tipoErp()),
                 codEmpres,
-                properties.getNumPeriodo(),
+                firstLookup.numPeriodo(),
                 rutProveedor,
                 requiredText(documento.numeroDocumento(), "DocumentoContable.numeroDocumento"),
-                properties.getCodSistem(),
+                firstLookup.codSistem(),
                 firstCodCuenta(documento),
-                properties.getCodTipCuenta(),
+                firstLookup.codTipCuenta(),
                 codContbl,
-                codMoneda,
+                firstLookup.codMoneda(),
                 fechaEmision,
                 documentGloss(documento),
                 fechaEmision,
@@ -118,7 +117,7 @@ public class ProcurementDocumentMapper {
                 fechaRecepcion);
     }
 
-    private List<MappedDetail> toDetails(DocumentoContable documento, String codEmpres, String codMoneda) {
+    private List<MappedDetail> toDetails(DocumentoContable documento) {
         List<DetailSource> sources = allDetailSources(documento);
         if (sources.isEmpty()) {
             throw new ProcurementMappingException("DocumentoContable must contain at least one distribucion");
@@ -132,10 +131,7 @@ public class ProcurementDocumentMapper {
             Long codCuenta = requiredLong(distribucion.codCuentaContable(), "DistribucionContable.codCuentaContable");
             String codImpsto = taxTypeResolver.resolve(distribucion.montoNeto());
             ProcurementItemLookupResult lookup = lookupService.resolveItemForDistribution(
-                    codEmpres,
-                    properties.getNumPeriodo(),
                     properties.getCodSistem(),
-                    codMoneda,
                     codCuenta,
                     codImpsto);
             ProcurementCmpDocumtDetRequest request = new ProcurementCmpDocumtDetRequest(
@@ -144,9 +140,9 @@ public class ProcurementDocumentMapper {
                     lookup.grlCodItem(),
                     distribucion.codCentroCosto(),
                     requiredText(distribucion.codCuentaContable(), "DistribucionContable.codCuentaContable"),
-                    properties.getCodTipCuenta(),
-                    properties.getLineGloss(),
-                    properties.getDefaultCantidad(),
+                    lookup.codTipCuenta(),
+                    documentGloss(documento),
+                    quantityOrDefault(source.conciliacion()),
                     zeroIfNull(unitValue),
                     zeroIfNull(unitValue),
                     properties.getValTipCambio(),
@@ -171,6 +167,14 @@ public class ProcurementDocumentMapper {
                     throw new ProcurementMappingException("Ambiguous Procurement COD_CONTBL from ASI lookup: " + left + ", " + right);
                 })
                 .orElseThrow(() -> new ProcurementMappingException("ASI lookup did not return COD_CONTBL"));
+    }
+
+    private ProcurementItemLookupResult firstLookup(List<MappedDetail> details) {
+        return details.stream()
+                .map(MappedDetail::lookup)
+                .filter(Objects::nonNull)
+                .findFirst()
+                .orElseThrow(() -> new ProcurementMappingException("ASI lookup did not return any detail"));
     }
 
     private List<DistribucionContable> allDistribuciones(DocumentoContable documento) {
@@ -202,10 +206,7 @@ public class ProcurementDocumentMapper {
     }
 
     private String documentGloss(DocumentoContable documento) {
-        if (!isBlank(documento.observacion())) {
-            return documento.observacion();
-        }
-        return "Artikos " + safe(documento.proveedor()) + " doc " + safe(documento.numeroDocumento()).trim();
+        return "%s %s".formatted(safe(documento.tipoErp()), safe(documento.proveedor())).trim();
     }
 
     private String requiredText(String value, String fieldName) {
@@ -238,15 +239,8 @@ public class ProcurementDocumentMapper {
         return value == null ? BigDecimal.ZERO : value;
     }
 
-    private String resolveCurrency(String docCurrency) {
-        if (isBlank(docCurrency)) {
-            return properties.getDefaultCurrency();
-        }
-        String normalized = docCurrency.trim().toUpperCase();
-        if ("CLP".equals(normalized) || "$".equals(normalized)) {
-            return "$";
-        }
-        return properties.getDefaultCurrency();
+    private BigDecimal quantityOrDefault(Conciliacion conciliacion) {
+        return conciliacion.quantity() == null ? BigDecimal.ONE : conciliacion.quantity();
     }
 
     private String safe(String value) {

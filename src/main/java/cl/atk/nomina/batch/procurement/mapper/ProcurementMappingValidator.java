@@ -11,22 +11,10 @@ public class ProcurementMappingValidator {
     public void validate(ArtikosProfileType profile, ProcurementMappingProperties properties) {
         requireText(properties.getDocumentType(), "procurement.mapping.document-type");
         requireText(properties.getCodSistem(), "procurement.mapping.cod-sistem");
-        requireValue(properties.getNumPeriodo(), "procurement.mapping.num-periodo");
-        requireText(properties.getCodTipCuenta(), "procurement.mapping.cod-tip-cuenta");
-        requireText(properties.getLineGloss(), "procurement.mapping.line-gloss");
-        requireText(properties.getDefaultCurrency(), "procurement.mapping.default-currency");
         requireValue(properties.getValTipCambio(), "procurement.mapping.val-tip-cambio");
         requireValue(properties.getPctDscnto(), "procurement.mapping.pct-dscnto");
         requireValue(properties.getMtoDscnto(), "procurement.mapping.mto-dscnto");
         requireValue(properties.getPctIva(), "procurement.mapping.pct-iva");
-        requireValue(properties.getDefaultCantidad(), "procurement.mapping.default-cantidad");
-    }
-
-    public String company(ArtikosProfileType profile, ProcurementMappingProperties properties) {
-        if (properties.getCompanyByProfile() == null) {
-            return null;
-        }
-        return properties.getCompanyByProfile().get(profile.name());
     }
 
     private void requireText(String value, String propertyName) {

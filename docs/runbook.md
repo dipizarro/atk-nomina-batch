@@ -85,6 +85,63 @@ Si QA Artikos no tiene nominas disponibles, se puede usar `artikos.source.mode=l
 
 En este modo no se consulta `NOMFACTERP`, no se confirma `NOMFACTCONFIR` y no se envia `NOMFACTRES` real a Artikos. La guia esta en `docs/local-e2e-testing.md`.
 
+## Validacion Procurement
+
+Para validar Procurement en ambiente local/controlado se requiere activar el cliente y la integracion documental:
+
+```properties
+procurement.client.enabled=true
+procurement.integration.enabled=true
+```
+
+Si se quiere probar sin depender de Artikos remoto, usar modo XML local:
+
+```properties
+artikos.source.mode=local-xml
+artikos.source.local-xml-path=classpath:samples/ZSGRALES_Nom15961_v2.xml
+artikos.confirm.enabled=false
+artikos.result.enabled=false
+```
+
+Con `artikos.source.mode=local-xml`, confirmar en logs:
+
+- aparece `sourceMode=local-xml`;
+- aparece `Skipping Artikos NOMFACTCONFIR`;
+- aparece `Skipping Artikos NOMFACTRES send`;
+- no aparece llamada real a `NOMFACTERP`, `NOMFACTCONFIR` ni `NOMFACTRES`.
+
+Para revisar el resultado funcional:
+
+```sql
+SELECT JOB_EXECUTION_ID,
+       NUMERO_NOMINA,
+       TOTAL_DOCUMENTS,
+       TOTAL_OK,
+       TOTAL_NOK,
+       STATUS,
+       ERROR_MESSAGE,
+       CREATED_AT,
+       UPDATED_AT
+FROM CONTROL_NOMINA
+ORDER BY CREATED_AT DESC;
+```
+
+Interpretacion Procurement:
+
+- `statusCode=0`: documento OK.
+- `statusCode=-20` con mensaje de duplicado: OK idempotente. Se informa como documento OK y descripcion `Documento ya existia en Procurement/ASI`.
+- Otro `statusCode` funcional: documento NOK.
+- Timeout, HTTP `5xx`, respuesta no parseable o error de lookup/mapping: nomina `ERROR`, job `FAILED`.
+
+Para revisar logs, filtrar por:
+
+```text
+jobExecutionId=<id>
+operation=PROCUREMENT_POST_DOCUMENT
+```
+
+Las evidencias sanitizadas del flujo local estan en `docs/evidence/procurement-local-e2e.md`.
+
 ## Como consultar estado del batch
 
 Endpoint:

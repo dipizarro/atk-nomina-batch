@@ -25,11 +25,14 @@ class ProcurementMappingLookupServiceTest {
                 .thenReturn(true);
 
         ProcurementItemLookupResult result = service.resolveItemForDistribution(
-                "002", 202606, "CM", "$", 6131311000L, "IVA");
+                "CM", 6131311000L, "IVA");
 
         assertThat(result.grlCodItem()).isEqualTo("6131311");
         assertThat(result.codTipUnid()).isEqualTo("UNI");
+        assertThat(result.codTipCuenta()).isEqualTo("2");
         assertThat(result.codContbl()).isEqualTo("3");
+        assertThat(result.codSistem()).isEqualTo("CM");
+        assertThat(result.numPeriodo()).isEqualTo(202606);
         assertThat(result.codImpsto()).isEqualTo("IVA");
         assertThat(result.codMoneda()).isEqualTo("$");
         assertThat(result.codCuenta()).isEqualTo(6131311000L);
@@ -42,7 +45,7 @@ class ProcurementMappingLookupServiceTest {
         when(detailRepository.findActiveMappingsByAccount(6131311000L, "V"))
                 .thenReturn(List.of(detail("6131311", "UNI", "3", "EXE")));
 
-        assertThatThrownBy(() -> service.resolveItemForDistribution("002", 202606, "CM", "$", 6131311000L, "IVA"))
+        assertThatThrownBy(() -> service.resolveItemForDistribution("CM", 6131311000L, "IVA"))
                 .isInstanceOf(ProcurementMappingException.class)
                 .hasMessageContaining("No ASI item mapping found")
                 .hasMessageContaining("availableMappings=[CM/EXE/$/6131311]");
@@ -53,7 +56,7 @@ class ProcurementMappingLookupServiceTest {
         when(detailRepository.findActiveMappingsByAccount(6131311000L, "CM", "IVA", "V"))
                 .thenReturn(List.of(detail("6131311", "UNI", "3"), detail("6131312", "UNI", "3")));
 
-        assertThatThrownBy(() -> service.resolveItemForDistribution("002", 202606, "CM", "$", 6131311000L, "IVA"))
+        assertThatThrownBy(() -> service.resolveItemForDistribution("CM", 6131311000L, "IVA"))
                 .isInstanceOf(ProcurementMappingException.class)
                 .hasMessageContaining("Ambiguous ASI item mapping");
     }
@@ -75,6 +78,7 @@ class ProcurementMappingLookupServiceTest {
         GrlMaeItemDetEntity entity = new GrlMaeItemDetEntity();
         entity.setId(id);
         entity.setCodTipUnid(codTipUnid);
+        entity.setCodTipCntaItems("2");
         entity.setCodContbl(codContbl);
         entity.setAIndVige("V");
         return entity;

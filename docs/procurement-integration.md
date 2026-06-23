@@ -6,10 +6,30 @@ La aplicacion ya cuenta con:
 
 - mapper Artikos -> Procurement CMP;
 - DTOs JSON para `CMP`;
-- cliente HTTP configurable para `POST /api/v1/document`.
-- integracion opcional al processor real del batch.
+- cliente HTTP configurable para `POST /api/v1/document`;
+- integracion opcional al processor real del batch;
+- lookup ASI operativo contra `GRL_MAE_ITEM` y `GRL_MAE_ITEM_DET`;
+- idempotencia funcional para `statusCode=-20`;
+- flujo local XML validado para pruebas end-to-end controladas.
 
 La integracion con el flujo batch queda controlada por feature flag. Por defecto esta deshabilitada para mantener el comportamiento operacional existente.
+
+## Estado actual
+
+- Mapper Procurement `CMP` operativo.
+- Lookup ASI operativo para item, unidad, tipo cuenta, contable, sistema, periodo y moneda.
+- Cliente HTTP Procurement operativo.
+- Integracion batch operativa bajo `procurement.integration.enabled`.
+- `statusCode=0` tratado como OK.
+- `statusCode=-20` con mensaje de duplicado tratado como OK idempotente.
+- Flujo local XML validado.
+- Pendiente validacion con nomina real Artikos QA en estado correcto para `NOMFACTERP`, `NOMFACTCONFIR` y `NOMFACTRES`.
+
+El cierre funcional y las evidencias sanitizadas estan documentadas en:
+
+- `docs/procurement-functional-closure.md`
+- `docs/asi-lookup.md`
+- `docs/evidence/procurement-local-e2e.md`
 
 ## Endpoint objetivo
 
@@ -225,7 +245,6 @@ No se loguea el JSON completo en `INFO`. Request y response completos quedan res
 
 - Implementar bulk.
 - Implementar retry Procurement.
-- Consultar ASI.
 - Modificar Artikos SOAP.
 - Cambiar `NOMFACTRES`.
 - Crear tabla adicional de auditoria por documento.

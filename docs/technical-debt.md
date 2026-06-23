@@ -71,11 +71,10 @@ Pendiente:
 
 ## Integracion Procurement
 
-Abordado parcialmente en Sprint 9.0:
+Abordado en Sprints 9.0 a 9.7:
 
 - Mapper Artikos -> Procurement CMP implementado.
 - DTOs Procurement serializan con nombres JSON esperados.
-- Campos ASI iniciales quedan configurables por properties.
 - `HNR` queda fuera de alcance.
 - Cliente HTTP Procurement implementado en Sprint 9.1 para `POST /api/v1/document`.
 - Timeouts y URL Procurement quedan configurables.
@@ -87,11 +86,14 @@ Abordado parcialmente en Sprint 9.0:
 - Modo `artikos.source.mode=local-xml` implementado para pruebas end-to-end tecnicas con XML local cuando QA Artikos no tenga nominas disponibles.
 - XML Artikos v2 soportado en Sprint 9.5.
 - `Tipo_ERP`, `Msg_To` y `USO_IVA` se usan como fuente principal del mapper Procurement.
-- `COD_CONTBL`, `COD_TIP_UNID` y `GRL_COD_ITEM` se resuelven desde `GRL_MAE_ITEM_DET` con validacion de maestro `GRL_MAE_ITEM`.
+- `COD_CONTBL`, `COD_TIP_UNID`, `GRL_COD_ITEM`, `COD_TIP_CNTA_ITEMS`, `COD_SISTEM`, `NUM_PERIODO` y `COD_MONEDA` se resuelven desde `GRL_MAE_ITEM_DET` con validacion de maestro `GRL_MAE_ITEM`.
+- Cierre funcional Procurement documentado en `docs/procurement-functional-closure.md`.
+- Lookup ASI documentado en `docs/asi-lookup.md`.
+- Evidencias sanitizadas del flujo local XML creadas en `docs/evidence/`.
 
 Pendiente:
 
-- Formalizar en la documentacion de Procurement que `statusCode=-20` corresponde a `DOCUMENT_ALREADY_EXISTS`.
+- Formalizar con el equipo Procurement que `statusCode=-20` corresponde a `DOCUMENT_ALREADY_EXISTS`.
 - Idealmente reemplazar la deteccion por texto por un codigo funcional documentado y estable.
 - Evaluar endpoint bulk futuro.
 - Definir retry Procurement si aplica.
@@ -103,6 +105,7 @@ Pendiente:
 - Definir estados funcionales y reintentos finos para Procurement.
 - Validar funcionalmente el mapeo con nominas reales cuando Artikos QA vuelva a entregar documentos procesables.
 - Validar `NOMFACTCONFIR` y `NOMFACTRES` reales contra Artikos QA con nominas en estado correcto.
+- Validar catalogo formal de errores Procurement.
 
 ## Contrato REST y errores
 
