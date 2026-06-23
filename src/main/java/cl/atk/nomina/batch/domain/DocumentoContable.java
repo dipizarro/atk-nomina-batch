@@ -20,6 +20,7 @@ public record DocumentoContable(
         String urlDocumento,
         String observacion,
         String docCurrency,
+        String usoIva,
         BigDecimal montoNeto,
         BigDecimal montoIva,
         BigDecimal montoExento,

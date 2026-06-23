@@ -96,6 +96,7 @@ class ProcurementDocumentProcessingServiceTest {
                 source.urlDocumento(),
                 source.observacion(),
                 source.docCurrency(),
+                source.usoIva(),
                 source.montoNeto(),
                 source.montoIva(),
                 source.montoExento(),

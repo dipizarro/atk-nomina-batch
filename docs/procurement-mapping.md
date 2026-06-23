@@ -1,5 +1,25 @@
 # Procurement CMP mapping
 
+## Estado actual
+
+Desde Sprint 9.5 el mapper soporta XML Artikos v2 y consulta homologaciones ASI para completar campos Procurement por linea de distribucion.
+
+Fuentes principales:
+
+- XML Artikos v2: `Tipo_ERP`, `Msg_To`, `USO_IVA`, `DocCurrency`, fechas y distribuciones.
+- ASI Oracle: `GRL_MAE_ITEM_DET` por `COD_CUENTA`, `COD_SISTEM` y `COD_IMPSTO`, mas validacion de maestro vigente en `GRL_MAE_ITEM`, para resolver `GRL_COD_ITEM`, `COD_TIP_UNID` y `COD_CONTBL`.
+- Properties: constantes operativas como `document-type`, `cod-sistem`, `num-periodo`, `cod-tip-cuenta`, descuentos, IVA y cantidad.
+
+Reglas nuevas:
+
+- Raiz `COD_TIP_DOCUMT` sigue siendo `CMP`.
+- `CMP_DOCUMT.COD_TIP_DOCUMT` se obtiene desde `Tipo_ERP`: `FEC/33`, `FCE/34`, `NDC/56`, `ECC/61`.
+- `CMP_DOCUMT.COD_EMPRES` se resuelve desde `Msg_To`: `001/ZSGVIDA` -> `001`, `002/ZSGRALES` -> `002`; si falta, se usa fallback por profile.
+- `CMP_DOCUMT.CODIGO_REC_IVA` se obtiene desde `USO_IVA`; valores permitidos `U`, `R`, `N`; si viene vacio, default `U`.
+- `DocCurrency=CLP` o `$` se envia como `$`; otra moneda usa `procurement.mapping.default-currency`.
+- Cada distribucion consulta `GRL_MAE_ITEM_DET` por `COD_CUENTA`, `COD_SISTEM=CM` y `COD_IMPSTO`. Si `Monto_Neto > 0`, `COD_IMPSTO=IVA`; si `Monto_Neto = 0`, `COD_IMPSTO=EXE`. Luego valida el maestro vigente en `GRL_MAE_ITEM` usando `COD_EMPRES`, `NUM_PERIODO` y `GRL_COD_ITEM` devueltos por el detalle.
+- Si las lineas devuelven distintos `COD_CONTBL`, el mapper falla con `ProcurementMappingException`.
+
 ## Alcance Sprint 9.0
 
 Sprint 9.0 implementa el mapper Artikos -> Procurement CMP.
@@ -17,7 +37,7 @@ Decisiones confirmadas:
 - Solo se genera `CMP`.
 - `HNR` queda fuera de alcance y se envia como `null`.
 - No se implementa bulk.
-- No se consulta ASI.
+- El alcance inicial no consultaba ASI; desde Sprint 9.5 el lookup ASI queda integrado para homologaciones de item.
 - No se modifica el flujo SOAP Artikos.
 - No se modifica `NOMFACTRES`.
 
@@ -121,11 +141,15 @@ Si falta una property obligatoria, el mapper lanza `ProcurementMappingException`
 
 ## Campos candidatos a consulta ASI futura
 
-- `NUM_PERIODO`
+Esta seccion queda como referencia historica. Desde Sprint 9.5 ya se resuelven desde ASI:
+
 - `COD_CONTBL`
 - `COD_TIP_UNID`
 - `GRL_COD_ITEM`
-- `CODIGO_REC_IVA`
+
+Siguen pendientes de definicion funcional:
+
+- `NUM_PERIODO`
 - Validacion de cuenta contable y centro de costo
 - Periodo abierto
 

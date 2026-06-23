@@ -2,6 +2,12 @@ package cl.atk.nomina.batch.procurement.mapper;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import cl.atk.nomina.batch.domain.DocumentoContable;
 import cl.atk.nomina.batch.domain.Nomina;
@@ -9,6 +15,9 @@ import cl.atk.nomina.batch.domain.artikos.ArtikosProfileType;
 import cl.atk.nomina.batch.procurement.config.ProcurementMappingProperties;
 import cl.atk.nomina.batch.procurement.dto.ProcurementDocumentRequest;
 import cl.atk.nomina.batch.procurement.exception.ProcurementMappingException;
+import cl.atk.nomina.batch.procurement.lookup.ProcurementItemLookupResult;
+import cl.atk.nomina.batch.procurement.lookup.ProcurementMappingLookupService;
+import cl.atk.nomina.batch.procurement.lookup.ProcurementTaxTypeResolver;
 import cl.atk.nomina.batch.service.NominaXmlParserService;
 import java.math.BigDecimal;
 import org.junit.jupiter.api.Test;
@@ -20,7 +29,7 @@ class ProcurementDocumentMapperTest {
             new ClassPathResource("samples/ZSVIDA_Nom15960.xml"));
 
     @Test
-    void mapsArtikosDocumentToProcurementCmpRequestForGenerales() {
+    void mapsArtikosDocumentToProcurementCmpRequestUsingMsgToBeforeProfileFallback() {
         Nomina nomina = parser.parseSampleFile();
         DocumentoContable documento = nomina.documentos().get(0);
 
@@ -31,14 +40,14 @@ class ProcurementDocumentMapperTest {
         assertThat(request.hnr()).isNull();
         assertThat(request.cmp()).isNotNull();
         assertThat(request.cmp().cmpDocumt().codTipDocumt()).isEqualTo("FEC");
-        assertThat(request.cmp().cmpDocumt().codEmpres()).isEqualTo("002");
+        assertThat(request.cmp().cmpDocumt().codEmpres()).isEqualTo("001");
         assertThat(request.cmp().cmpDocumt().codSistem()).isEqualTo("CM");
         assertThat(request.cmp().cmpDocumt().numRut()).isEqualTo(96670840L);
         assertThat(request.cmp().cmpDocumt().numDoccmp()).isEqualTo("2");
         assertThat(request.cmp().cmpDocumt().codCuenta()).isEqualTo("6130401000");
         assertThat(request.cmp().cmpDocumt().codTipCuenta()).isEqualTo("2");
         assertThat(request.cmp().cmpDocumt().codContbl()).isEqualTo("CONTBL");
-        assertThat(request.cmp().cmpDocumt().codMoneda()).isEqualTo("CLP");
+        assertThat(request.cmp().cmpDocumt().codMoneda()).isEqualTo("$");
         assertThat(request.cmp().cmpDocumt().fecEmidcm()).isEqualTo("2026-06-03");
         assertThat(request.cmp().cmpDocumt().fechaRecFe()).isEqualTo("2026-06-03");
         assertThat(request.cmp().cmpDocumt().mtoTotNtodig()).isEqualByComparingTo("19000");
@@ -95,6 +104,7 @@ class ProcurementDocumentMapperTest {
                 source.urlDocumento(),
                 source.observacion(),
                 "USD",
+                source.usoIva(),
                 source.montoNeto(),
                 source.montoIva(),
                 source.montoExento(),
@@ -115,21 +125,65 @@ class ProcurementDocumentMapperTest {
     @Test
     void throwsClearExceptionWhenRequiredPropertyIsMissing() {
         ProcurementMappingProperties properties = defaultProperties();
-        properties.setCodContbl(null);
+        properties.setCodSistem(null);
 
         Nomina nomina = parser.parseSampleFile();
 
         assertThatThrownBy(() -> mapper(properties)
                 .toCmpDocumentRequest(ArtikosProfileType.VIDA, nomina, nomina.documentos().get(0)))
                 .isInstanceOf(ProcurementMappingException.class)
-                .hasMessage("Missing procurement mapping property: procurement.mapping.cod-contbl");
+                .hasMessage("Missing procurement mapping property: procurement.mapping.cod-sistem");
+    }
+
+    @Test
+    void mapsArtikosV2DocumentUsingAsiLookupPerDistribution() {
+        Nomina nomina = parser.parse(new ClassPathResource("samples/ZSGRALES_Nom15961_v2.xml"));
+        ProcurementMappingLookupService lookupService = mock(ProcurementMappingLookupService.class);
+        when(lookupService.resolveItemForDistribution(
+                eq("002"), eq(202606), eq("CM"), eq("$"), eq(6131311000L), eq("IVA")))
+                .thenReturn(new ProcurementItemLookupResult("6131311", "UNI", "3", "IVA", "$", 6131311000L));
+        when(lookupService.resolveItemForDistribution(
+                eq("002"), eq(202606), eq("CM"), eq("$"), eq(6131202000L), eq("IVA")))
+                .thenReturn(new ProcurementItemLookupResult("6131202", "UNI", "3", "IVA", "$", 6131202000L));
+
+        ProcurementDocumentRequest request = mapper(defaultProperties(), lookupService)
+                .toCmpDocumentRequest(ArtikosProfileType.GENERALES, nomina, nomina.documentos().get(0));
+
+        assertThat(request.codTipDocumt()).isEqualTo("CMP");
+        assertThat(request.cmp().cmpDocumt().codTipDocumt()).isEqualTo("FEC");
+        assertThat(request.cmp().cmpDocumt().codEmpres()).isEqualTo("002");
+        assertThat(request.cmp().cmpDocumt().codSistem()).isEqualTo("CM");
+        assertThat(request.cmp().cmpDocumt().codigoRecIva()).isEqualTo("U");
+        assertThat(request.cmp().cmpDocumt().codContbl()).isEqualTo("3");
+        assertThat(request.cmp().cmpDocumtDet()).hasSize(2);
+        assertThat(request.cmp().cmpDocumtDet().get(0).grlCodItem()).isEqualTo("6131311");
+        assertThat(request.cmp().cmpDocumtDet().get(1).grlCodItem()).isEqualTo("6131202");
+        assertThat(request.cmp().cmpDocumtDet().get(0).codTipUnid()).isEqualTo("UNI");
+        assertThat(request.cmp().cmpDocumtDet().get(1).codTipUnid()).isEqualTo("UNI");
+        assertThat(request.cmp().cmpDocumtDet().get(0).codCcosto()).isEqualTo("20001");
+        assertThat(request.cmp().cmpDocumtDet().get(1).codCcosto()).isEqualTo("20001");
     }
 
     private ProcurementDocumentMapper mapper(ProcurementMappingProperties properties) {
+        ProcurementMappingLookupService lookupService = mock(ProcurementMappingLookupService.class);
+        when(lookupService.resolveItemForDistribution(
+                anyString(), anyInt(), anyString(), anyString(), anyLong(), anyString()))
+                .thenReturn(new ProcurementItemLookupResult("SERVICIO", "UN", "CONTBL", "IVA", "$", 6130401000L));
+        return mapper(properties, lookupService);
+    }
+
+    private ProcurementDocumentMapper mapper(
+            ProcurementMappingProperties properties,
+            ProcurementMappingLookupService lookupService) {
         return new ProcurementDocumentMapper(
                 properties,
                 new ProcurementMappingValidator(),
-                new ProcurementDateMapper());
+                new ProcurementDateMapper(),
+                new ArtikosDocumentTypeMapper(),
+                new ArtikosCompanyMapper(new ProcurementMappingValidator()),
+                new ProcurementUsoIvaMapper(),
+                new ProcurementTaxTypeResolver(),
+                lookupService);
     }
 
     private ProcurementMappingProperties defaultProperties() {
@@ -139,6 +193,7 @@ class ProcurementDocumentMapperTest {
         properties.setCodTipUnid("UN");
         properties.setGrlCodItem("SERVICIO");
         properties.setCodigoRecIva("REC");
+        properties.setDefaultCurrency("$");
         properties.setDefaultCantidad(BigDecimal.ONE);
         return properties;
     }

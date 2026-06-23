@@ -171,6 +171,7 @@ public class NominaXmlParserService {
                     text(documento, "URL_Documento"),
                     text(documento, "Observacion"),
                     text(documento, "DocCurrency"),
+                    normalizeUsoIva(text(documento, "USO_IVA")),
                     decimalValue(documento, "Monto_Neto"),
                     decimalValue(documento, "Monto_IVA"),
                     decimalValue(documento, "Monto_Exento"),
@@ -298,5 +299,9 @@ public class NominaXmlParserService {
     private BigDecimal decimalValue(Element element, String localName) {
         String value = text(element, localName);
         return value.isBlank() ? null : new BigDecimal(value);
+    }
+
+    private String normalizeUsoIva(String value) {
+        return value == null || value.isBlank() ? "U" : value.trim().toUpperCase();
     }
 }

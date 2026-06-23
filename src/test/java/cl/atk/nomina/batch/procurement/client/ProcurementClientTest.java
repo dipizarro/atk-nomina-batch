@@ -2,6 +2,11 @@ package cl.atk.nomina.batch.procurement.client;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 import static org.springframework.test.web.client.ExpectedCount.once;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.content;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.header;
@@ -20,9 +25,15 @@ import cl.atk.nomina.batch.procurement.config.ProcurementMappingProperties;
 import cl.atk.nomina.batch.procurement.dto.ProcurementDocumentPostResult;
 import cl.atk.nomina.batch.procurement.dto.ProcurementDocumentRequest;
 import cl.atk.nomina.batch.procurement.exception.ProcurementClientException;
+import cl.atk.nomina.batch.procurement.lookup.ProcurementItemLookupResult;
+import cl.atk.nomina.batch.procurement.lookup.ProcurementMappingLookupService;
+import cl.atk.nomina.batch.procurement.lookup.ProcurementTaxTypeResolver;
+import cl.atk.nomina.batch.procurement.mapper.ArtikosCompanyMapper;
+import cl.atk.nomina.batch.procurement.mapper.ArtikosDocumentTypeMapper;
 import cl.atk.nomina.batch.procurement.mapper.ProcurementDateMapper;
 import cl.atk.nomina.batch.procurement.mapper.ProcurementDocumentMapper;
 import cl.atk.nomina.batch.procurement.mapper.ProcurementMappingValidator;
+import cl.atk.nomina.batch.procurement.mapper.ProcurementUsoIvaMapper;
 import cl.atk.nomina.batch.service.NominaXmlParserService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.math.BigDecimal;
@@ -114,6 +125,29 @@ class ProcurementClientTest {
     }
 
     @Test
+    void postDocumentThrowsTechnicalExceptionWhenParseableResponseContainsOracleError() {
+        RestClient.Builder builder = RestClient.builder();
+        MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
+        server.expect(once(), requestTo("https://procurement.test/api/v1/document"))
+                .andRespond(withBadRequest().body("""
+                        {
+                          "payload": null,
+                          "statusCode": -1,
+                          "message": "Error interno",
+                          "error": "ORA-02291: restriccion de integridad ASI.FK_CUENTA_DOCUMT_COMPRAS violada"
+                        }
+                        """).contentType(MediaType.APPLICATION_JSON));
+
+        assertThatThrownBy(() -> client(builder.build(), enabledProperties()).postDocument(sampleRequest()))
+                .isInstanceOf(ProcurementClientException.class)
+                .hasMessageContaining("requestJson={")
+                .hasMessageContaining("\"COD_TIP_DOCUMT\":\"CMP\"")
+                .hasMessageContaining("procurementError=Procurement technical failure")
+                .hasMessageContaining("ORA-02291");
+        server.verify();
+    }
+
+    @Test
     void postDocumentThrowsTechnicalExceptionWhenHttp500() {
         RestClient.Builder builder = RestClient.builder();
         MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
@@ -122,7 +156,9 @@ class ProcurementClientTest {
 
         assertThatThrownBy(() -> client(builder.build(), enabledProperties()).postDocument(sampleRequest()))
                 .isInstanceOf(ProcurementClientException.class)
-                .hasMessageContaining("Procurement respondio HTTP 500");
+                .hasMessageContaining("requestJson={")
+                .hasMessageContaining("\"COD_TIP_DOCUMT\":\"CMP\"")
+                .hasMessageContaining("procurementError=Procurement respondio HTTP 500");
         server.verify();
     }
 
@@ -135,7 +171,8 @@ class ProcurementClientTest {
 
         assertThatThrownBy(() -> client(builder.build(), enabledProperties()).postDocument(sampleRequest()))
                 .isInstanceOf(ProcurementClientException.class)
-                .hasMessageContaining("No fue posible consumir Procurement document endpoint");
+                .hasMessageContaining("requestJson={")
+                .hasMessageContaining("procurementError=No fue posible consumir Procurement document endpoint");
         server.verify();
     }
 
@@ -169,7 +206,7 @@ class ProcurementClientTest {
                           "COD_TIP_DOCUMT": "CMP",
                           "CMP": {
                             "CMP_DOCUMT": {
-                              "COD_EMPRES": "002",
+                              "COD_EMPRES": "001",
                               "NUM_DOCCMP": "2"
                             },
                             "CMP_DOCUMT_DET": [
@@ -224,10 +261,19 @@ class ProcurementClientTest {
         Nomina nomina = new NominaXmlParserService(new ClassPathResource("samples/ZSVIDA_Nom15960.xml"))
                 .parseSampleFile();
         DocumentoContable documento = nomina.documentos().get(0);
+        ProcurementMappingLookupService lookupService = mock(ProcurementMappingLookupService.class);
+        when(lookupService.resolveItemForDistribution(
+                anyString(), anyInt(), anyString(), anyString(), anyLong(), anyString()))
+                .thenReturn(new ProcurementItemLookupResult("SERVICIO", "UN", "CONTBL", "IVA", "$", 6130401000L));
         return new ProcurementDocumentMapper(
                 mappingProperties(),
                 new ProcurementMappingValidator(),
-                new ProcurementDateMapper())
+                new ProcurementDateMapper(),
+                new ArtikosDocumentTypeMapper(),
+                new ArtikosCompanyMapper(new ProcurementMappingValidator()),
+                new ProcurementUsoIvaMapper(),
+                new ProcurementTaxTypeResolver(),
+                lookupService)
                 .toCmpDocumentRequest(ArtikosProfileType.GENERALES, nomina, documento);
     }
 

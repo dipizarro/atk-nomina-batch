@@ -77,11 +77,16 @@ public class ProcurementClient {
                                 httpStatus.value(), elapsedMs(startedAt));
 
                         if (httpStatus.is5xxServerError()) {
-                            throw new ProcurementClientException(
-                                    "Procurement respondio HTTP " + httpStatus.value() + ": " + compact(responseBody));
+                            throw technicalException(
+                                    "Procurement respondio HTTP " + httpStatus.value(),
+                                    httpStatus.value(),
+                                    null,
+                                    requestBody,
+                                    responseBody,
+                                    null);
                         }
 
-                        ProcurementDocumentPostResult result = parseResult(httpStatus, responseBody);
+                        ProcurementDocumentPostResult result = parseResult(httpStatus, responseBody, requestBody);
                         LOGGER.info("Procurement document functional response httpStatus={} statusCode={} "
                                         + "successful={} elapsedMs={}",
                                 httpStatus.value(), result.statusCode(), result.successful(), elapsedMs(startedAt));
@@ -90,15 +95,33 @@ public class ProcurementClient {
         } catch (ProcurementClientException exception) {
             throw exception;
         } catch (RestClientException exception) {
-            throw new ProcurementClientException("No fue posible consumir Procurement document endpoint", exception);
+            throw technicalException(
+                    "No fue posible consumir Procurement document endpoint: " + compact(exception.getMessage()),
+                    null,
+                    null,
+                    requestBody,
+                    null,
+                    exception);
         }
     }
 
-    private ProcurementDocumentPostResult parseResult(HttpStatusCode httpStatus, String responseBody) {
-        ProcurementApiResponse<JsonNode> apiResponse = parseResponse(responseBody, httpStatus);
+    private ProcurementDocumentPostResult parseResult(
+            HttpStatusCode httpStatus,
+            String responseBody,
+            String requestBody) {
+        ProcurementApiResponse<JsonNode> apiResponse = parseResponse(responseBody, httpStatus, requestBody);
         Integer functionalStatusCode = apiResponse.statusCode();
         boolean successful = httpStatus.is2xxSuccessful() && Integer.valueOf(0).equals(functionalStatusCode);
         String errorMessage = successful ? null : errorMessage(apiResponse);
+        if (!successful && isTechnicalProcurementFailure(responseBody, errorMessage, apiResponse.message())) {
+            throw technicalException(
+                    "Procurement technical failure",
+                    httpStatus.value(),
+                    functionalStatusCode,
+                    requestBody,
+                    responseBody,
+                    null);
+        }
         return new ProcurementDocumentPostResult(
                 successful,
                 functionalStatusCode,
@@ -108,14 +131,22 @@ public class ProcurementClient {
                 responseBody);
     }
 
-    private ProcurementApiResponse<JsonNode> parseResponse(String responseBody, HttpStatusCode httpStatus) {
+    private ProcurementApiResponse<JsonNode> parseResponse(
+            String responseBody,
+            HttpStatusCode httpStatus,
+            String requestBody) {
         try {
             JavaType type = objectMapper.getTypeFactory()
                     .constructParametricType(ProcurementApiResponse.class, JsonNode.class);
             return objectMapper.readValue(responseBody, type);
         } catch (JsonProcessingException exception) {
-            throw new ProcurementClientException(
-                    "Procurement respondio HTTP " + httpStatus.value() + " con body no parseable", exception);
+            throw technicalException(
+                    "Procurement respondio HTTP " + httpStatus.value() + " con body no parseable",
+                    httpStatus.value(),
+                    null,
+                    requestBody,
+                    responseBody,
+                    exception);
         }
     }
 
@@ -175,6 +206,49 @@ public class ProcurementClient {
             }
         }
         return null;
+    }
+
+    private boolean isTechnicalProcurementFailure(String responseBody, String errorMessage, String message) {
+        String text = "%s %s %s".formatted(responseBody, errorMessage, message).toUpperCase();
+        return text.contains("ORA-")
+                || text.contains("SQL ERROR")
+                || text.contains("SQLSTATE")
+                || text.contains("CONSTRAINT")
+                || text.contains("RESTRICC")
+                || text.contains("INTEGRITY")
+                || text.contains("INTEGRIDAD")
+                || text.contains("HIBERNATE")
+                || text.contains("JDBC");
+    }
+
+    private ProcurementClientException technicalException(
+            String reason,
+            Integer httpStatus,
+            Integer statusCode,
+            String requestBody,
+            String responseBody,
+            Throwable cause) {
+        LOGGER.error("Procurement technical error reason={} httpStatus={} statusCode={} requestJson={} responseBody={}",
+                reason,
+                httpStatus,
+                statusCode,
+                requestBody,
+                responseBody,
+                cause);
+        String message = "requestJson=" + compact(requestBody)
+                + " procurementError=" + reason;
+        if (httpStatus != null) {
+            message += " httpStatus=" + httpStatus;
+        }
+        if (statusCode != null) {
+            message += " statusCode=" + statusCode;
+        }
+        if (responseBody != null && !responseBody.isBlank()) {
+            message += " response=" + compact(responseBody);
+        }
+        return cause == null
+                ? new ProcurementClientException(message)
+                : new ProcurementClientException(message, cause);
     }
 
     private SimpleClientHttpRequestFactory requestFactory(ProcurementClientProperties properties) {

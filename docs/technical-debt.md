@@ -85,6 +85,9 @@ Abordado parcialmente en Sprint 9.0:
 - Idempotencia inicial implementada en Sprint 9.3 sin tabla adicional: `CONTROL_NOMINA` controla reproceso por nomina y duplicados Procurement conocidos se tratan como OK idempotente.
 - Respuesta real `statusCode=-20` de Procurement formalizada como OK idempotente en Sprint 9.3.1.
 - Modo `artikos.source.mode=local-xml` implementado para pruebas end-to-end tecnicas con XML local cuando QA Artikos no tenga nominas disponibles.
+- XML Artikos v2 soportado en Sprint 9.5.
+- `Tipo_ERP`, `Msg_To` y `USO_IVA` se usan como fuente principal del mapper Procurement.
+- `COD_CONTBL`, `COD_TIP_UNID` y `GRL_COD_ITEM` se resuelven desde `GRL_MAE_ITEM_DET` con validacion de maestro `GRL_MAE_ITEM`.
 
 Pendiente:
 
@@ -92,9 +95,10 @@ Pendiente:
 - Idealmente reemplazar la deteccion por texto por un codigo funcional documentado y estable.
 - Evaluar endpoint bulk futuro.
 - Definir retry Procurement si aplica.
-- Obtener desde ASI los campos que hoy quedan configurables.
 - Validar con Procurement si `CMP_DOCUMT_DET_RUT.CMP_NUM_RUT` y `NUM_RUT` deben seguir usando ambos el RUT proveedor.
-- Validar valores definitivos para `COD_CONTBL`, `COD_TIP_UNID`, `GRL_COD_ITEM` y `NUM_PERIODO`.
+- Validar regla `COD_IMPSTO` con negocio.
+- Validar comportamiento final si una nomina trae lineas con distintos `COD_CONTBL`.
+- Validar `NUM_PERIODO` contra periodo abierto ASI.
 - Revisar si `CONTROL_NOMINA` debe agregar empresa/profile en una evolucion futura para evitar ambiguedad por `NUMERO_NOMINA`.
 - Definir estados funcionales y reintentos finos para Procurement.
 - Validar funcionalmente el mapeo con nominas reales cuando Artikos QA vuelva a entregar documentos procesables.

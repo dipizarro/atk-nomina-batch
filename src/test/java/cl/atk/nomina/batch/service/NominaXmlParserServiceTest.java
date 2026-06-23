@@ -43,6 +43,33 @@ class NominaXmlParserServiceTest {
         assertThat(totalDistribuciones(documento)).isEqualTo(2);
     }
 
+    @Test
+    void parsesArtikosSoapNominaV2Sample() {
+        Nomina nomina = parserService.parse(new ClassPathResource("samples/ZSGRALES_Nom15961_v2.xml"));
+        DocumentoContable documento = nomina.documentos().get(0);
+
+        assertThat(nomina.cabecera().numeroNomina()).isEqualTo(15961L);
+        assertThat(nomina.cabecera().msgTo()).isEqualTo("002");
+        assertThat(nomina.cabecera().cantidadDocumentos()).isEqualTo(1);
+        assertThat(documento.tipoErp()).isEqualTo("FEC");
+        assertThat(documento.usoIva()).isEqualTo("U");
+        assertThat(documento.fechaVencimiento()).isEqualTo("2026-07-03");
+        assertThat(documento.fechaRecepSii()).isEqualTo("2026-06-03");
+        assertThat(documento.docCurrency()).isEqualTo("CLP");
+        assertThat(documento.conciliaciones()).hasSize(2);
+        assertThat(totalDistribuciones(documento)).isEqualTo(2);
+
+        var firstDistribution = documento.conciliaciones().get(0).distribuciones().get(0);
+        var secondDistribution = documento.conciliaciones().get(1).distribuciones().get(0);
+        assertThat(firstDistribution.codCuentaContable()).isEqualTo("6131311000");
+        assertThat(secondDistribution.codCuentaContable()).isEqualTo("6131202000");
+        assertThat(firstDistribution.codCentroCosto()).isEqualTo("20001");
+        assertThat(secondDistribution.codCentroCosto()).isEqualTo("20001");
+        assertThat(firstDistribution.montoNeto()).isEqualByComparingTo("15000");
+        assertThat(secondDistribution.montoIva()).isEqualByComparingTo("760");
+        assertThat(secondDistribution.montoTotal()).isEqualByComparingTo("4760");
+    }
+
     private int totalDistribuciones(DocumentoContable documento) {
         return documento.conciliaciones().stream()
                 .map(Conciliacion::distribuciones)

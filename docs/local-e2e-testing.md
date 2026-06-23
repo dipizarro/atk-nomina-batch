@@ -23,9 +23,15 @@ Para activar el modo local:
 
 ```properties
 artikos.source.mode=local-xml
-artikos.source.local-xml-path=classpath:samples/artikos/ZSVIDA_Nom15960.xml
+artikos.source.local-xml-path=classpath:samples/ZSGRALES_Nom15961_v2.xml
 artikos.confirm.enabled=false
 artikos.result.enabled=false
+```
+
+Tambien puede usarse el XML historico, pero requiere que ASI tenga homologada la cuenta `6130401000`:
+
+```properties
+artikos.source.local-xml-path=classpath:samples/artikos/ZSVIDA_Nom15960.xml
 ```
 
 Aunque `artikos.confirm.enabled` o `artikos.result.enabled` queden en `true`, la aplicacion fuerza skip de llamadas Artikos reales cuando `artikos.source.mode=local-xml`.
@@ -37,6 +43,8 @@ procurement.client.enabled=true
 procurement.integration.enabled=true
 procurement.client.base-url=http://localhost:8081
 ```
+
+Desde Sprint 9.5 el mapper Procurement consulta `ASI.GRL_MAE_ITEM` y `ASI.GRL_MAE_ITEM_DET` para homologar item por distribucion. Por eso, si `procurement.integration.enabled=true`, la prueba local requiere conectividad a Oracle ASI y datos vigentes para las cuentas del XML.
 
 ## Ejecucion
 

@@ -166,7 +166,7 @@ Cuando `procurement.integration.enabled=true`, cada documento Artikos se envia i
 
 Si el job se inicia con `dryRun=true`, el procesamiento se fuerza a la ruta simulada/local y no llama Procurement aunque `procurement.integration.enabled=true`.
 
-El mapeo actual construye el request CMP desde `DocumentoContable`, genera una linea por distribucion Artikos y deja `HNR` fuera de alcance. La aplicacion aun no consulta ASI.
+El mapeo actual construye el request CMP desde `DocumentoContable`, genera una linea por distribucion Artikos, soporta XML Artikos v2 y obtiene homologaciones de item desde `ASI.GRL_MAE_ITEM_DET`/`ASI.GRL_MAE_ITEM`. `HNR` queda fuera de alcance.
 
 El detalle esta documentado en `docs/procurement-mapping.md` y `docs/procurement-integration.md`.
 
