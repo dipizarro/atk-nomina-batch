@@ -10,6 +10,8 @@ Este modo valida la cadena tecnica:
 XML local -> parser -> processor -> Procurement -> ResultadoNomina -> NOMFACTRES generado -> CONTROL_NOMINA
 ```
 
+Para replay local de una nomina real capturada manualmente desde SoapUI antes de una prueba remota real, usar `docs/artikos-replay-local.md`.
+
 ## Que no prueba
 
 - No consulta `NOMFACTERP` real.
@@ -102,3 +104,8 @@ Las evidencias del cierre funcional local XML quedan en:
 - `docs/evidence/nomfactres-sample-sanitized.xml`
 
 Estos archivos no contienen tokens, passwords, URLs privadas ni datos reales sensibles.
+
+## Diferencia con replay de XML real capturado
+
+- `docs/local-e2e-testing.md`: pruebas locales con XML de ejemplo o fixtures controlados.
+- `docs/artikos-replay-local.md`: procedimiento previo a una prueba remota real usando un XML real capturado desde SoapUI.

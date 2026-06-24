@@ -125,6 +125,14 @@ POST /api/v1/nominas/batch/start
 - Validar mapeo completo con usuarios funcionales ASI/Procurement.
 - Confirmar si se requiere bulk por performance.
 
+## Replay local recomendado antes de remoto real
+
+Antes de ejecutar el flujo remoto completo Artikos + Adapter + Procurement, se recomienda capturar el XML real con SoapUI y ejecutarlo en modo `artikos.source.mode=local-xml`.
+
+Este paso permite validar parser, mapper Procurement, lookup ASI, respuesta Procurement, `NOMFACTRES` local y `CONTROL_NOMINA` sin confirmar ni cerrar la nomina en Artikos.
+
+Procedimiento: `docs/artikos-replay-local.md`.
+
 ## Fuera de alcance
 
 - Implementar bulk.

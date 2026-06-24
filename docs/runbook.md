@@ -85,6 +85,20 @@ Si QA Artikos no tiene nominas disponibles, se puede usar `artikos.source.mode=l
 
 En este modo no se consulta `NOMFACTERP`, no se confirma `NOMFACTCONFIR` y no se envia `NOMFACTRES` real a Artikos. La guia esta en `docs/local-e2e-testing.md`.
 
+## Replay local antes de ejecucion remota real
+
+Antes de ejecutar una nomina real en modo remoto completo, se recomienda:
+
+1. Usar SoapUI para extraer el XML real de Artikos.
+2. Guardar el XML en una ruta local segura o en `src/test/resources/samples/artikos/captured/` solo si esta sanitizado/autorizado.
+3. Ejecutar la aplicacion con `artikos.source.mode=local-xml`.
+4. Mantener `artikos.confirm.enabled=false` y `artikos.result.enabled=false`.
+5. Validar parser, lookup ASI, request Procurement, response Procurement, `NOMFACTRES` local y `CONTROL_NOMINA`.
+6. Revisar evidencias y logs por `jobExecutionId`.
+7. Recién despues ejecutar `artikos.source.mode=remote`, siempre que la nomina siga disponible en Artikos y el equipo haya autorizado la prueba remota.
+
+Procedimiento completo: `docs/artikos-replay-local.md`.
+
 ## Validacion Procurement
 
 Para validar Procurement en ambiente local/controlado se requiere activar el cliente y la integracion documental:

@@ -195,6 +195,8 @@ Este modo no consume `NOMFACTERP`, no confirma `NOMFACTCONFIR` y no envia `NOMFA
 
 Guia completa: `docs/local-e2e-testing.md`.
 
+Para replay local de una nomina real capturada desde SoapUI antes de ejecutar el flujo remoto completo, usar `docs/artikos-replay-local.md`.
+
 ## Oracle
 
 Los scripts Oracle necesarios estan en:
@@ -314,6 +316,7 @@ El servicio nacio como una POC para validar integracion SOAP Artikos, procesamie
 - Integracion Procurement: `docs/procurement-integration.md`
 - Cierre funcional Procurement: `docs/procurement-functional-closure.md`
 - Lookup ASI Procurement: `docs/asi-lookup.md`
+- Replay local Artikos capturado: `docs/artikos-replay-local.md`
 - Logging: `docs/logging.md`
 - Hardening operativo: `docs/operational-hardening.md`
 - Manejo de errores: `docs/error-handling.md`
