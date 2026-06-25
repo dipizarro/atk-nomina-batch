@@ -133,6 +133,12 @@ Este paso permite validar parser, mapper Procurement, lookup ASI, respuesta Proc
 
 Procedimiento: `docs/artikos-replay-local.md`.
 
+## Siguiente hito: validacion remota real
+
+El flujo local XML fue validado como paso previo. El siguiente hito es la primera ejecucion remota real con `NOMFACTERP`, `NOMFACTCONFIR`, Procurement y `NOMFACTRES` reales.
+
+Procedimiento: `docs/artikos-remote-e2e.md`.
+
 ## Fuera de alcance
 
 - Implementar bulk.

@@ -90,6 +90,8 @@ Abordado en Sprints 9.0 a 9.7:
 - Cierre funcional Procurement documentado en `docs/procurement-functional-closure.md`.
 - Lookup ASI documentado en `docs/asi-lookup.md`.
 - Evidencias sanitizadas del flujo local XML creadas en `docs/evidence/`.
+- Procedimiento de replay local con XML capturado documentado en `docs/artikos-replay-local.md`.
+- Procedimiento de primera ejecucion remota real documentado en `docs/artikos-remote-e2e.md`.
 
 Pendiente:
 
@@ -106,6 +108,8 @@ Pendiente:
 - Validar funcionalmente el mapeo con nominas reales cuando Artikos QA vuelva a entregar documentos procesables.
 - Validar `NOMFACTCONFIR` y `NOMFACTRES` reales contra Artikos QA con nominas en estado correcto.
 - Validar catalogo formal de errores Procurement.
+- Validar con mas nominas reales despues de la primera ejecucion remota.
+- Validar operacion productiva detras de CONC/Kong.
 
 ## Contrato REST y errores
 

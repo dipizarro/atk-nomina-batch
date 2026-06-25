@@ -197,6 +197,8 @@ Guia completa: `docs/local-e2e-testing.md`.
 
 Para replay local de una nomina real capturada desde SoapUI antes de ejecutar el flujo remoto completo, usar `docs/artikos-replay-local.md`.
 
+Para la primera ejecucion remota real Artikos + Adapter + Procurement, usar `docs/artikos-remote-e2e.md`.
+
 ## Oracle
 
 Los scripts Oracle necesarios estan en:
@@ -317,6 +319,7 @@ El servicio nacio como una POC para validar integracion SOAP Artikos, procesamie
 - Cierre funcional Procurement: `docs/procurement-functional-closure.md`
 - Lookup ASI Procurement: `docs/asi-lookup.md`
 - Replay local Artikos capturado: `docs/artikos-replay-local.md`
+- Ejecucion remota real Artikos: `docs/artikos-remote-e2e.md`
 - Logging: `docs/logging.md`
 - Hardening operativo: `docs/operational-hardening.md`
 - Manejo de errores: `docs/error-handling.md`

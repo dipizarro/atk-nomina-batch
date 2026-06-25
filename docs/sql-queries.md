@@ -285,3 +285,43 @@ WHERE END_TIME IS NOT NULL
   AND STATUS IN ('COMPLETED', 'ABANDONED')
 GROUP BY STATUS;
 ```
+
+## Validacion ejecucion remota Artikos
+
+### Ultimos registros CONTROL_NOMINA
+
+```sql
+SELECT *
+FROM CONTROL_NOMINA
+ORDER BY CREATED_AT DESC;
+```
+
+### Control por numero de nomina
+
+```sql
+SELECT JOB_EXECUTION_ID,
+       NUMERO_NOMINA,
+       TOTAL_DOCUMENTS,
+       TOTAL_OK,
+       TOTAL_NOK,
+       STATUS,
+       ERROR_MESSAGE,
+       CREATED_AT,
+       UPDATED_AT
+FROM CONTROL_NOMINA
+WHERE NUMERO_NOMINA = :numeroNomina
+ORDER BY CREATED_AT DESC;
+```
+
+### Ultimas ejecuciones Spring Batch
+
+```sql
+SELECT JOB_EXECUTION_ID,
+       STATUS,
+       START_TIME,
+       END_TIME,
+       EXIT_CODE,
+       EXIT_MESSAGE
+FROM BATCH_JOB_EXECUTION
+ORDER BY JOB_EXECUTION_ID DESC;
+```

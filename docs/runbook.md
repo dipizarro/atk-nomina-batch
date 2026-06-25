@@ -99,6 +99,20 @@ Antes de ejecutar una nomina real en modo remoto completo, se recomienda:
 
 Procedimiento completo: `docs/artikos-replay-local.md`.
 
+## Primera ejecucion remota real
+
+La primera ejecucion remota real debe seguir el procedimiento `docs/artikos-remote-e2e.md`.
+
+En esta modalidad:
+
+- `artikos.source.mode=remote` consulta `NOMFACTERP` real.
+- `artikos.confirm.enabled=true` envia `NOMFACTCONFIR` real.
+- `artikos.result.enabled=true` envia `NOMFACTRES` real.
+- `procurement.integration.enabled=true` llama Procurement real.
+- `POST /api/v1/nominas/batch/start` sigue siendo el unico contrato productivo inicial.
+
+No ejecutar remoto si el replay local de la misma nomina no fue validado o si Artikos no confirma que la nomina sigue disponible.
+
 ## Validacion Procurement
 
 Para validar Procurement en ambiente local/controlado se requiere activar el cliente y la integracion documental:

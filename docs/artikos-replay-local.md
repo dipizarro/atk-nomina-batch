@@ -170,6 +170,14 @@ Solo pasar a integracion real remota si:
 - `docs/local-e2e-testing.md`: pruebas locales con XML de ejemplo o fixture de desarrollo.
 - `docs/artikos-replay-local.md`: replay local con XML real capturado desde SoapUI antes de una prueba remota real.
 
+## Paso siguiente
+
+Si el replay local funciona sin error tecnico y el equipo confirma que la nomina sigue disponible en Artikos, el siguiente paso es ejecutar la prueba remota real:
+
+```text
+docs/artikos-remote-e2e.md
+```
+
 ## Seguridad de datos
 
 - No subir tokens, passwords, URLs privadas ni XML con datos sensibles no autorizados.
