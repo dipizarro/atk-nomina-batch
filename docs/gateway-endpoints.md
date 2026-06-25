@@ -12,8 +12,9 @@ La aplicacion `atk-nomina-batch` opera detras del API Gateway corporativo CONC/K
 | `POST /api/v1/admin/batch-metadata/purge` | No | No | Endpoint administrativo. Requiere `app.admin.enabled=true` y debe protegerse con autorizacion corporativa antes de uso productivo. |
 | `/api/v1/dev/**` | No | No | Endpoints diagnosticos. Requieren `app.diagnostics.enabled=true`; no deben publicarse en gateway. |
 | `GET /actuator/health` | Segun ambiente | Solo monitoreo interno | Debe exponerse solo al mecanismo de monitoreo autorizado por infraestructura. |
-| `GET /api/v1/health` | Si | No inicialmente | Health propio simple. Preferir monitoreo interno. |
-| `GET /swagger-ui.html` | Segun ambiente | No | Documentacion tecnica, no contrato productivo de integracion. |
+| `GET /api/v1/health` | No por defecto | No | Health propio simple. Para entrega inicial preferir `GET /actuator/health`. |
+| `GET /swagger-ui.html` | No | No | Deshabilitado en QA/PROD con `springdoc.swagger-ui.enabled=false`. |
+| `GET /v3/api-docs` | No | No | Deshabilitado en QA/PROD con `springdoc.api-docs.enabled=false`. |
 
 ## Properties de exposicion
 

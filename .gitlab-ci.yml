@@ -1,0 +1,91 @@
+stages:
+  - validate
+  - test
+  - build
+  - quality
+  - package
+  - deploy
+
+variables:
+  APP_NAME: "atk-nomina-batch"
+  MAVEN_CLI_OPTS: "-B"
+  DOCKER_IMAGE_TAG: "$CI_REGISTRY_IMAGE:$CI_COMMIT_SHORT_SHA"
+  K8S_NAMESPACE: "artikos"
+  FLUX_RESOURCE_PATH: "TODO/infra/flux/atk-nomina-batch"
+  IAC_GIT_REPO: "TODO_INFRA_IAC_GIT_REPO"
+
+# TODO Infra:
+# Reemplazar o complementar estos jobs con los componentes corporativos usados
+# por el repo modelo `artikos-integration`:
+# - docker lint
+# - docker build
+# - docker deploy
+# - deploy review
+# - SonarQube
+# - Azure App Configuration deploy
+# - Azure Key Vault create secrets
+
+maven_test:
+  stage: test
+  image: maven:3.9.9-eclipse-temurin-17
+  script:
+    - mvn $MAVEN_CLI_OPTS clean test
+  artifacts:
+    when: always
+    reports:
+      junit:
+        - target/surefire-reports/TEST-*.xml
+
+maven_package:
+  stage: build
+  image: maven:3.9.9-eclipse-temurin-17
+  script:
+    - mvn $MAVEN_CLI_OPTS clean package -DskipTests
+  artifacts:
+    paths:
+      - target/atk-nomina-batch-*.jar
+    expire_in: 1 week
+
+dockerfile_lint:
+  stage: validate
+  image: hadolint/hadolint:latest-alpine
+  script:
+    - hadolint Dockerfile
+  allow_failure: true
+
+sonarqube:
+  stage: quality
+  image: maven:3.9.9-eclipse-temurin-17
+  script:
+    - mvn $MAVEN_CLI_OPTS verify sonar:sonar
+  rules:
+    - if: '$SONAR_HOST_URL'
+
+docker_build:
+  stage: package
+  image: docker:27
+  services:
+    - docker:27-dind
+  script:
+    - docker build -t "$DOCKER_IMAGE_TAG" .
+    - docker push "$DOCKER_IMAGE_TAG"
+  rules:
+    - if: '$CI_REGISTRY'
+
+deploy_review:
+  stage: deploy
+  script:
+    - echo "TODO Infra: deploy review environment for $APP_NAME in namespace $K8S_NAMESPACE"
+  rules:
+    - if: '$CI_COMMIT_BRANCH && $CI_COMMIT_BRANCH != $CI_DEFAULT_BRANCH'
+  environment:
+    name: review/$CI_COMMIT_REF_SLUG
+
+deploy:
+  stage: deploy
+  script:
+    - echo "TODO Infra: deploy $APP_NAME using Flux path $FLUX_RESOURCE_PATH and IaC repo $IAC_GIT_REPO"
+  rules:
+    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
+  environment:
+    name: preproduction

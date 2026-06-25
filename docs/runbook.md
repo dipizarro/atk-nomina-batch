@@ -6,6 +6,17 @@
 
 La metadata tecnica del job queda en las tablas Spring Batch `BATCH_*`.
 
+## Entrega Infra y exposicion minima
+
+Para la entrega inicial en ambientes gestionados por Infra, la aplicacion debe operar detras de CONC/Kong con exposicion minima:
+
+- `POST /api/v1/nominas/batch/start`
+- `GET /actuator/health`
+
+Los endpoints operativos GET, `CONTROL_NOMINA`, admin, diagnostico y Swagger no quedan disponibles por defecto en QA/PROD. El seguimiento normal se realiza por logs y Oracle usando las consultas de `docs/sql-queries.md`.
+
+Solo habilitar temporalmente `app.endpoints.operations.enabled=true`, `app.admin.enabled=true` o `app.diagnostics.enabled=true` con autorizacion operativa.
+
 ## Flujo funcional resumido
 
 1. Un operador o scheduler inicia el batch por REST.

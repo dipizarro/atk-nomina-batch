@@ -1,341 +1,171 @@
 # atk-nomina-batch
 
-Servicio de integracion batch para procesar nominas de documentos contables desde Artikos mediante Spring Boot, Spring Batch y Oracle.
+Servicio Spring Boot + Spring Batch para integrar nominas Artikos con Procurement CMP.
 
-La aplicacion consulta nominas con `NOMFACTERP`, confirma recepcion con `NOMFACTCONFIR`, procesa documentos localmente o contra Procurement, envia resultados con `NOMFACTRES` y registra control funcional en `CONTROL_NOMINA`.
-
-## Requisitos
-
-- Java 17
-- Maven 3.9+
-- Oracle con metadata Spring Batch `BATCH_*`
-- Tabla funcional `CONTROL_NOMINA`
+La aplicacion consulta nominas Artikos con `NOMFACTERP`, confirma recepcion con `NOMFACTCONFIR`, procesa documentos contra Procurement, genera `NOMFACTRES` y registra control funcional en Oracle mediante `CONTROL_NOMINA`.
 
 ## Stack
 
-- Spring Boot Web
+- Java 17
+- Spring Boot 3.3.5
 - Spring Batch
-- Spring Validation
 - Spring Data JPA
-- Spring Actuator
 - Oracle JDBC
-- H2 para tests
 - Log4j2
+- Spring Actuator
 - Springdoc OpenAPI
-- JUnit, Spring Boot Test y Spring Batch Test
+- Maven
 
-## Ejecucion local
+## Endpoints publicados
 
-La aplicacion debe ejecutarse con el perfil `local` para desarrollo en la maquina del equipo. La configuracion local sensible vive en `src/main/resources/application-local.properties`, que esta ignorado por Git. Usa `src/main/resources/application-local.example.properties` como plantilla.
+Para entrega inicial detras de CONC/Kong solo se deben publicar:
 
-```powershell
-mvn spring-boot:run -Dspring-boot.run.profiles=local
-```
+| Endpoint | Uso |
+| --- | --- |
+| `POST /api/v1/nominas/batch/start` | Dispara asincronicamente el batch de nominas. |
+| `GET /actuator/health` | Health check para monitoreo interno. |
 
-Tambien puedes sobreescribir valores desde variables de entorno y luego copiarlos al archivo local si lo prefieres:
+No quedan disponibles por defecto en QA/PROD:
 
-```powershell
-$env:ATK_ORACLE_URL='jdbc:oracle:thin:@host:puerto:sid'
-$env:ATK_ORACLE_USERNAME='usuario'
-$env:ATK_ORACLE_PASSWORD='password'
-```
+- `/api/v1/nominas/batch/**` consultas operativas.
+- `/api/v1/control-nomina/**`.
+- `/api/v1/admin/**`.
+- `/api/v1/dev/**`.
+- Swagger/OpenAPI.
 
-## Endpoints principales
+La matriz completa esta en [docs/gateway-endpoints.md](docs/gateway-endpoints.md).
 
-- Health propio: `GET /api/v1/health`
-- Iniciar batch de nominas: `POST /api/v1/nominas/batch/start`
-- Consultar estado batch: `GET /api/v1/nominas/batch/{jobExecutionId}`
-- Consultar resumen batch: `GET /api/v1/nominas/batch/{jobExecutionId}/summary`
-- Consultar resultado por nomina: `GET /api/v1/nominas/batch/{jobExecutionId}/results/{numeroNomina}`
-- Consultar control por job: `GET /api/v1/control-nomina/jobs/{jobExecutionId}`
-- Consultar control por nomina: `GET /api/v1/control-nomina/jobs/{jobExecutionId}/nominas/{numeroNomina}`
-- Simular o ejecutar purga de metadata Spring Batch: `POST /api/v1/admin/batch-metadata/purge`
-- Actuator health: `GET /actuator/health`
-- Swagger UI: `GET /swagger-ui.html`
+## Configuracion
 
-Los endpoints temporales de diagnostico Artikos y CONTROL_NOMINA viven bajo `/api/v1/dev/...` y solo se cargan si `app.diagnostics.enabled=true`.
+La configuracion productiva debe entregarse por variables de entorno, Azure App Configuration y Azure Key Vault. No se versionan passwords, tokens, connection strings ni `application-local.properties`.
 
-## Configuracion principal
+Archivos incluidos:
 
-La configuracion base vive en `src/main/resources/application.properties`. La configuracion local sensible vive en `src/main/resources/application-local.properties`, que esta ignorado por Git.
+- `src/main/resources/application.properties`: defaults seguros sin secretos.
+- `src/main/resources/application-qa.properties`: placeholders QA.
+- `src/main/resources/application-prod.properties`: placeholders PROD.
+- `src/main/resources/application-local.example.properties`: plantilla local sin secretos reales.
 
-- `atk.batch.simulation-nominas=1000`
-- `atk.batch.default-max-nominas=50`
-- `atk.batch.max-nominas-per-run=50`
-- `atk.batch.simulation-iterations=100`
-- `atk.batch.chunk-size=20`
-- `atk.batch.real.chunk-size=1`
-- `atk.batch.sample-file=classpath:samples/ZSVIDA_Nom15960.xml`
-- `app.diagnostics.enabled=false`
-- `app.admin.enabled=false`
-- `app.config.validation.strict=false`
-- `artikos.http.connect-timeout-ms=5000`
-- `artikos.http.read-timeout-ms=30000`
-- `artikos.retry.enabled=true`
-- `artikos.retry.max-attempts=3`
-- `artikos.retry.backoff-ms=1000`
-- `procurement.client.enabled=false`
-- `procurement.integration.enabled=false`
+`application-local.properties` esta ignorado por Git y excluido del empaquetado Maven.
 
-En Oracle, Spring Batch no crea su metadata automaticamente. La aplicacion usa `spring.batch.jdbc.initialize-schema=never`, por lo que los scripts SQL deben ejecutarse manualmente antes de disparar el endpoint de inicio.
+Variables y permisos requeridos para Infra: [docs/infra-delivery.md](docs/infra-delivery.md).
 
-## Configuration and secrets
+## Profiles
 
-La aplicacion separa configuracion por perfiles Spring:
-
-- `application.properties`: base comun sin secretos.
-- `application-local.properties`: desarrollo local, ignorado por Git.
-- `application-local.example.properties`: plantilla segura para desarrollo local.
-- `application-qa.properties`: QA con placeholders.
-- `application-prod.properties`: produccion con placeholders y diagnostics deshabilitado.
-
-QA y PROD deben resolver secretos desde Azure Key Vault, variables de entorno inyectadas por pipeline/runtime o un mecanismo administrado equivalente. Cuando la aplicacion corra en Azure, se debe preferir Managed Identity para acceder a Key Vault.
-
-No subir passwords, tokens Artikos, connection strings ni archivos `.env` al repositorio. La lista de secretos esperados y nombres recomendados esta en `docs/secrets.md`.
-
-## Diagnostics mode
-
-El modo diagnostico esta deshabilitado por defecto:
+QA/PROD usan modo remoto Artikos:
 
 ```properties
-app.diagnostics.enabled=false
-```
-
-Para pruebas locales puede habilitarse en `src/main/resources/application-local.properties`:
-
-```properties
-app.diagnostics.enabled=true
-```
-
-Cuando esta activo, la aplicacion expone endpoints bajo `/api/v1/dev/...` para probar operaciones SOAP Artikos y una insercion de prueba en `CONTROL_NOMINA`:
-
-- `POST /api/v1/dev/artikos/nominas/fetch`
-- `POST /api/v1/dev/artikos/nominas/confirm`
-- `POST /api/v1/dev/artikos/nominas/result/test`
-- `POST /api/v1/dev/procurement/documents/test`
-- `GET /api/v1/dev/artikos/config/{profile}`
-- `POST /api/v1/dev/control-nomina/test`
-
-Este modo no debe estar habilitado en produccion. Los endpoints diagnosticos pueden consumir servicios Artikos QA o escribir datos de prueba en Oracle.
-
-Para probar solo el mapeo Artikos XML -> Procurement CMP y el POST a Procurement, sin confirmar Artikos ni tocar `CONTROL_NOMINA`:
-
-```powershell
-curl -X POST "http://localhost:8080/api/v1/dev/procurement/documents/test" `
-  -H "Content-Type: application/json" `
-  -d "{\"profile\":\"VIDA\",\"documentIndex\":0}"
-```
-
-Si no se envia `rawXml`, el endpoint usa el XML configurado en `atk.batch.sample-file`.
-
-## Gateway exposure
-
-La aplicacion esta preparada para operar detras del API Gateway corporativo CONC/Kong. En este sprint no implementa Spring Security, OAuth2, Basic Auth ni JWT; la autenticacion y autorizacion deben ser aplicadas por el gateway.
-
-El contrato productivo inicial publicado por gateway es solamente:
-
-```http
-POST /api/v1/nominas/batch/start
-```
-
-Los endpoints operativos de consulta, `CONTROL_NOMINA`, administracion y diagnostico quedan apagados por defecto en QA/PROD:
-
-```properties
-app.endpoints.operations.enabled=false
+artikos.source.mode=remote
+artikos.confirm.enabled=true
+artikos.result.enabled=true
 app.diagnostics.enabled=false
 app.admin.enabled=false
+app.endpoints.operations.enabled=false
 ```
 
-La matriz de exposicion esta documentada en `docs/gateway-endpoints.md`.
-
-## Procurement integration
-
-La aplicacion cuenta con mapper JSON Artikos -> Procurement `CMP`, cliente HTTP configurable y procesamiento documental opcional dentro del batch para el endpoint objetivo:
-
-```http
-POST /api/v1/document
-```
-
-Por defecto la integracion batch permanece deshabilitada:
+Si las tablas Spring Batch viven en otro esquema, Infra debe definir:
 
 ```properties
-procurement.integration.enabled=false
+SPRING_BATCH_JDBC_TABLE_PREFIX=BACHPROCESS.BATCH_
 ```
 
-Cuando `procurement.integration.enabled=true`, cada documento Artikos se envia individualmente a Procurement. `statusCode=0` se interpreta como `OK`; `statusCode!=0` se interpreta como `NOK` funcional y se informa a Artikos via `NOMFACTRES`. Timeouts, errores de conexion, HTTP `5xx`, respuestas no parseables, serializacion y errores de mapeo Artikos -> CMP detienen el job, dejan `CONTROL_NOMINA` en `ERROR` y no envian `NOMFACTRES`.
+## Build local
 
-Si el job se inicia con `dryRun=true`, el procesamiento se fuerza a la ruta simulada/local y no llama Procurement aunque `procurement.integration.enabled=true`.
-
-El mapeo actual construye el request CMP desde `DocumentoContable`, genera una linea por distribucion Artikos, soporta XML Artikos v2 y obtiene homologaciones de item desde `ASI.GRL_MAE_ITEM_DET`/`ASI.GRL_MAE_ITEM`. `HNR` queda fuera de alcance.
-
-El detalle esta documentado en `docs/procurement-mapping.md` y `docs/procurement-integration.md`.
-
-## Procurement functional closure
-
-El cierre funcional de la integracion Procurement queda documentado con evidencias sanitizadas:
-
-- Cierre funcional: `docs/procurement-functional-closure.md`
-- Lookup ASI: `docs/asi-lookup.md`
-- Evidencia local E2E: `docs/evidence/procurement-local-e2e.md`
-
-El flujo local XML ya permite validar parser, mapper, lookup ASI, POST Procurement, generacion de `NOMFACTRES` y actualizacion de `CONTROL_NOMINA` sin consumir Artikos remoto. Sigue pendiente la validacion con nominas reales Artikos QA en estado correcto para confirmar `NOMFACTCONFIR` y enviar `NOMFACTRES` real.
-
-## Local XML end-to-end testing
-
-Cuando QA Artikos no tiene nominas disponibles, se puede ejecutar el batch usando el XML local Artikos como fuente:
-
-```properties
-artikos.source.mode=local-xml
-artikos.source.local-xml-path=classpath:samples/artikos/ZSVIDA_Nom15960.xml
-artikos.confirm.enabled=false
-artikos.result.enabled=false
+```bash
+mvn clean test
+mvn clean package -DskipTests
 ```
 
-Este modo no consume `NOMFACTERP`, no confirma `NOMFACTCONFIR` y no envia `NOMFACTRES` real a Artikos. Si `procurement.integration.enabled=true`, si permite validar el envio tecnico a Procurement.
+El jar generado queda con el patron:
 
-Guia completa: `docs/local-e2e-testing.md`.
+```text
+target/atk-nomina-batch-*.jar
+```
 
-Para replay local de una nomina real capturada desde SoapUI antes de ejecutar el flujo remoto completo, usar `docs/artikos-replay-local.md`.
+## Ejecucion local con properties externo
 
-Para la primera ejecucion remota real Artikos + Adapter + Procurement, usar `docs/artikos-remote-e2e.md`.
+Crear un archivo local fuera del jar, por ejemplo:
+
+```text
+C:/deploy/atk-nomina-batch/config/application-local.properties
+```
+
+Usar como base `src/main/resources/application-local.example.properties` y completar valores locales.
+
+Ejecucion:
+
+```powershell
+java -jar target/atk-nomina-batch-0.0.1-SNAPSHOT.jar `
+  --spring.profiles.active=local `
+  --spring.config.additional-location=file:C:/deploy/atk-nomina-batch/config/
+```
+
+## Docker
+
+El `Dockerfile` usa build multi-stage con Maven + Java 17 y runtime Java 17 liviano:
+
+```bash
+docker build -t atk-nomina-batch:local .
+```
+
+## GitLab CI/CD
+
+El archivo `.gitlab-ci.yml` deja una base para GitLab con etapas de validacion, test, build, calidad, package y deploy.
+
+Valores pendientes de confirmar por Infra:
+
+- `FLUX_RESOURCE_PATH`
+- `IAC_GIT_REPO`
+- componentes corporativos definitivos del repo modelo `artikos-integration`
+- publicacion final de imagen/container registry
+- estrategia Azure App Configuration / Key Vault
 
 ## Oracle
 
-Los scripts Oracle necesarios estan en:
+Scripts versionados:
 
 ```text
 src/main/resources/db/oracle/V000__create_spring_batch_metadata.sql
 src/main/resources/db/oracle/V001__create_control_nomina.sql
 ```
 
-`V000` crea las tablas tecnicas `BATCH_*` que Spring Batch usa para instancias, ejecuciones, parametros y steps. `V001` crea `CONTROL_NOMINA`, que contiene el control funcional por nomina procesada.
+La aplicacion usa Oracle para:
 
-## Purga de metadata Spring Batch
+- Metadata Spring Batch `BATCH_*`.
+- Control funcional `CONTROL_NOMINA`.
+- Lookup ASI `GRL_MAE_ITEM` y `GRL_MAE_ITEM_DET`.
 
-Las tablas `BATCH_*` son metadata tecnica de Spring Batch. No reemplazan la auditoria funcional de nominas, que vive en `CONTROL_NOMINA`.
+Detalle de permisos: [docs/infra-delivery.md](docs/infra-delivery.md).
 
-Para evitar crecimiento indefinido de metadata tecnica existe un endpoint administrativo de purga controlada:
+## Runbook
 
-```http
-POST /api/v1/admin/batch-metadata/purge
-```
+Documentacion operativa:
 
-Ejemplo de simulacion:
+- [docs/runbook.md](docs/runbook.md)
+- [docs/sql-queries.md](docs/sql-queries.md)
+- [docs/error-handling.md](docs/error-handling.md)
+- [docs/operational-hardening.md](docs/operational-hardening.md)
+- [docs/artikos-remote-e2e.md](docs/artikos-remote-e2e.md)
+- [docs/delivery-checklist.md](docs/delivery-checklist.md)
+- [docs/release-notes.md](docs/release-notes.md)
 
-```json
-{
-  "retentionDays": 30,
-  "dryRun": true,
-  "includeFailed": false
-}
-```
-
-Reglas principales:
-
-- `retentionDays` es obligatorio y debe ser mayor o igual a `1`.
-- `dryRun` por defecto es `true`; en ese modo solo devuelve conteos candidatos por tabla.
-- Por defecto considera ejecuciones finalizadas con status `COMPLETED` y `ABANDONED`.
-- `FAILED` solo se considera si `includeFailed=true`.
-- Nunca purga ejecuciones activas o sin `END_TIME`.
-- La eliminacion respeta dependencias: contextos de step, steps, contextos de job, parametros, ejecuciones e instancias sin ejecuciones restantes.
-
-Ejecutar con `dryRun=false` elimina registros reales de `BATCH_*`; en produccion este endpoint debe protegerse con autenticacion y autorizacion.
-
-El endpoint de purga solo se carga si:
-
-```properties
-app.admin.enabled=true
-```
-
-## Operational logging
-
-Los logs incluyen contexto MDC para trazabilidad operacional:
-
-- `jobExecutionId`
-- `profile`
-- `numeroNomina`
-- `operation`
-
-Las operaciones SOAP se registran como `NOMFACTERP`, `NOMFACTCONFIR` y `NOMFACTRES`, con tiempos de ejecucion y status HTTP cuando aplica. Los tokens nunca deben imprimirse completos; se registran solo como presencia y valor enmascarado. El XML SOAP completo solo puede aparecer en `DEBUG` y con token enmascarado.
-
-La convencion completa esta en `docs/logging.md`.
-
-## Error handling policy
-
-La politica de errores esta documentada en `docs/error-handling.md`.
-
-Resumen operativo:
-
-- Sin nominas disponibles en Artikos: el job termina `COMPLETED` sin registros en `CONTROL_NOMINA`.
-- Error tecnico consultando Artikos: el job termina `FAILED`.
-- Rechazo de `NOMFACTCONFIR`: la nomina queda `ERROR` en `CONTROL_NOMINA` y el job termina `FAILED`.
-- Documento con validacion funcional NOK: el job continua, envia `NOMFACTRES` y la nomina queda `NOK`.
-- Documento rechazado funcionalmente por Procurement: el job continua, envia `NOMFACTRES` y la nomina queda `NOK`.
-- Error tecnico o mapping Procurement: la nomina queda `ERROR`, no se envia `NOMFACTRES` y el job termina `FAILED`.
-- Rechazo o falla de `NOMFACTRES`: la nomina queda `ERROR` y el job termina `FAILED`.
-
-Los endpoints de estado/resumen devuelven errores compactados; el stacktrace completo queda en logs y metadata Spring Batch.
-
-## Operational hardening
-
-Los controles operativos estan documentados en `docs/operational-hardening.md`.
-
-Incluyen timeouts SOAP, retry tecnico, errores no reintentables, limite `maxNominas`, concurrencia por perfil, health checks y proteccion por property del endpoint administrativo.
-
-## Operations
-
-La documentacion operativa inicial esta en:
-
-- Runbook operativo: `docs/runbook.md`
-- Consultas SQL de soporte: `docs/sql-queries.md`
-- Guia de soporte: `docs/support-guide.md`
-- Manejo de errores: `docs/error-handling.md`
-- Hardening operativo: `docs/operational-hardening.md`
-- Secretos y ambientes: `docs/secrets.md`
-
-El runbook explica como iniciar el batch, monitorear estado, revisar `CONTROL_NOMINA`, interpretar metadata `BATCH_*`, purgar metadata y actuar ante errores frecuentes.
-
-## Architecture and package conventions
-
-La revision estructural esta documentada en `docs/architecture-review.md`.
-
-El namespace base actual es `cl.atk.nomina.batch`. La decision esta registrada en `docs/decisions/ADR-002-package-namespace.md`.
-
-## Origen del proyecto
-
-El servicio nacio como una POC para validar integracion SOAP Artikos, procesamiento Spring Batch y persistencia Oracle. A partir de Sprint 8.1 el nombre y la documentacion principal se normalizan como aplicacion de integracion batch, manteniendo compatibilidad con componentes diagnosticos hasta su limpieza posterior.
-
-## Documentacion
-
-- Arquitectura: `docs/architecture.md`
-- Flujo batch: `docs/batch-flow.md`
-- Endpoints: `docs/endpoints.md`
-- Runbook operativo: `docs/runbook.md`
-- Consultas SQL de soporte: `docs/sql-queries.md`
-- Guia de soporte: `docs/support-guide.md`
-- Matriz gateway: `docs/gateway-endpoints.md`
-- Mapeo Procurement CMP: `docs/procurement-mapping.md`
-- Integracion Procurement: `docs/procurement-integration.md`
-- Cierre funcional Procurement: `docs/procurement-functional-closure.md`
-- Lookup ASI Procurement: `docs/asi-lookup.md`
-- Replay local Artikos capturado: `docs/artikos-replay-local.md`
-- Ejecucion remota real Artikos: `docs/artikos-remote-e2e.md`
-- Logging: `docs/logging.md`
-- Hardening operativo: `docs/operational-hardening.md`
-- Manejo de errores: `docs/error-handling.md`
-- Secretos y ambientes: `docs/secrets.md`
-- Revision de arquitectura: `docs/architecture-review.md`
-- Deuda tecnica: `docs/technical-debt.md`
-- Decisiones: `docs/decisions`
-
-## Validacion
+## Validacion previa a entrega
 
 ```bash
 mvn clean test
+mvn clean package -DskipTests
+docker build -t atk-nomina-batch:local .
 ```
 
-## Commit sugerido
+Antes de publicar en GitLab revisar:
+
+- No versionar `target/`, `logs/`, `.env`, zips locales ni jars generados.
+- No versionar `src/main/resources/application-local.properties`.
+- No incluir passwords, tokens ni URLs internas sensibles en commits.
+- Confirmar que QA/PROD mantengan apagados diagnostico, admin, operaciones y Swagger.
+
+Commit sugerido:
 
 ```bash
-git commit -m "docs: add operational runbook and support guide"
+git commit -m "chore: prepare GitLab infrastructure delivery"
 ```
